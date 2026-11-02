@@ -133,18 +133,46 @@
   .sheet .save{background:#fff; color:#000}
   .sheet .back{border:1.5px solid rgba(255,255,255,.4); color:#fff}
 
-  /* landscape: keep the whole control cluster compact so the viewfinder stays large */
-  @media (orientation:landscape) and (max-height:520px){
-    .bottom{padding-bottom:calc(env(safe-area-inset-bottom) + 8px); gap:5px}
-    .readout{padding:5px 8px}
-    .cell .v{font-size:13px}
-    .bar{padding-top:2px}
-    .shutter{width:60px; height:60px; border-width:2.5px}
-    .shutter .core{width:48px; height:48px}
-    .round{width:44px; height:44px; font-size:12px}
-    .count{font-size:84px}
-    .panel{max-height:62vh}
-    .overlay h1{font-size:38px}
+  /* landscape: move all controls to the edges so the center view is clear.
+     Shutter cluster -> right edge; top buttons -> left edge. */
+  @media (orientation:landscape) and (max-height:600px){
+    /* top buttons -> left edge, vertical */
+    .top{
+      flex-direction:column; align-items:flex-start; justify-content:center;
+      top:0; bottom:0; right:auto; width:auto; gap:18px;
+      padding:12px 10px 12px max(14px,env(safe-area-inset-left));
+      background:linear-gradient(90deg, rgba(0,0,0,.45), transparent);
+    }
+    .top .mode{min-width:0}
+    .top .tbtns{flex-direction:column; gap:16px}
+    .top .look{text-align:left; min-width:0}
+
+    /* shutter cluster -> right edge, vertical */
+    .bottom{
+      left:auto; top:0; bottom:0; right:0; width:116px;
+      flex-direction:column; justify-content:center; gap:16px;
+      padding:12px max(10px,env(safe-area-inset-right)) 12px 10px;
+      background:linear-gradient(270deg, rgba(0,0,0,.55), transparent);
+    }
+    .readout{flex-direction:column; background:transparent; backdrop-filter:none;
+      -webkit-backdrop-filter:none; padding:0; gap:9px}
+    .readout .cell{border-right:0}
+    .readout .cell .k{font-size:8px}
+    .readout .cell .v{font-size:13px}
+    .bar{flex-direction:column-reverse; align-items:center; padding:0; gap:16px}
+    .shutter{width:64px; height:64px; border-width:2.5px}
+    .shutter .core{width:52px; height:52px}
+    .round{width:46px; height:46px; font-size:12px}
+
+    /* settings panel floats on the LEFT so the right controls stay reachable */
+    .panel{
+      position:fixed; left:max(14px,env(safe-area-inset-left)); right:auto;
+      top:50%; transform:translateY(-50%); margin:0;
+      width:min(360px,54vw); max-height:88vh;
+    }
+
+    .count{font-size:88px}
+    .overlay h1{font-size:40px}
   }
 </style>
 </head>
@@ -161,6 +189,7 @@
     <div class="mode" id="modeTag">PRO</div>
     <div class="tbtns">
       <button id="flipBtn">FLIP</button>
+      <button id="lensBtn">1×</button>
       <button id="gridBtn">GRID</button>
       <button id="timerBtn">T:OFF</button>
     </div>
@@ -277,11 +306,12 @@ const els = {
   evReadout:el('evReadout'),
   rSs:el('rSs'), rF:el('rF'), rIso:el('rIso'),
   sheet:el('sheet'), shot:el('shot'), saveBtn:el('saveBtn'), backBtn:el('backBtn'), sheetHint:el('sheetHint'),
-  grid:el('grid'), gridBtn:el('gridBtn'), timerBtn:el('timerBtn'),
+  grid:el('grid'), gridBtn:el('gridBtn'), timerBtn:el('timerBtn'), lensBtn:el('lensBtn'),
   reticle:el('reticle'), count:el('count'),
 };
 
 let video, stream, track, gl, program, tex, uni, raf;
+let backLenses = [], lensIndex = 0;   // physical lenses (ultra-wide / wide / tele)
 
 /* ---------- shaders ---------- */
 const VERT = `
@@ -456,23 +486,73 @@ function render(){
 }
 
 /* ---------- camera ---------- */
+function videoConstraints(){
+  const dims = { width:{ideal:4096}, height:{ideal:2160} };
+  if(state.facing === 'user') return Object.assign({ facingMode:{ideal:'user'} }, dims);
+  const lens = backLenses[lensIndex];
+  return lens ? Object.assign({ deviceId:{exact:lens.id} }, dims)
+              : Object.assign({ facingMode:{ideal:'environment'} }, dims);
+}
+
+async function openStream(){
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  try{
+    return await navigator.mediaDevices.getUserMedia({ video:videoConstraints(), audio:false });
+  }catch(e){
+    // a specific lens can be rejected on some phones — fall back to the default camera
+    if(state.facing==='environment' && backLenses[lensIndex]){
+      backLenses = [];
+      return await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ideal:'environment'}, width:{ideal:4096}, height:{ideal:2160} }, audio:false });
+    }
+    throw e;
+  }
+}
+
 async function start(){
   try{
-    if(stream) stream.getTracks().forEach(t=>t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{ideal:state.facing}, width:{ideal:4096}, height:{ideal:2160} }, audio:false
-    });
+    stream = await openStream();
     if(!video){ video=document.createElement('video'); video.setAttribute('playsinline',''); video.muted=true; }
     video.srcObject = stream; await video.play();
     track = stream.getVideoTracks()[0] || null;
     if(!gl) initGL();
     els.overlay.style.display='none';
     cancelAnimationFrame(raf); render();
+    refreshLenses();
   }catch(e){
     els.overlay.style.display='flex';
     els.ovText.hidden = false;
     els.ovText.textContent = 'Camera access was blocked or unavailable. Open this page in Safari over https and allow the camera. ('+(e.name||e.message)+')';
   }
+}
+
+/* ---- physical lens (focal length) switching ---- */
+function lensTag(label){
+  const l = (label||'').toLowerCase();
+  if(l.includes('ultra')) return '0.5×';
+  if(l.includes('tele'))  return 'TELE';
+  if(l.includes('dual')||l.includes('triple')||l.includes('wide')) return '1×';
+  return '1×';
+}
+async function refreshLenses(){
+  try{
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const cams = devs.filter(d=>d.kind==='videoinput');
+    const back = cams.filter(d=>/back|rear|environment/i.test(d.label||''));
+    const list = (back.length ? back : cams).filter(d=>d.deviceId);
+    backLenses = list.map(d=>({ id:d.deviceId, label:d.label, tag:lensTag(d.label) }));
+    if(track && track.getSettings){
+      const s = track.getSettings();
+      if(s && s.deviceId){ const i = backLenses.findIndex(l=>l.id===s.deviceId); if(i>=0) lensIndex=i; }
+    }
+    updateLensBtn();
+  }catch(e){}
+}
+function updateLensBtn(){
+  const t = (state.facing==='user') ? 'FR'
+          : (backLenses.length ? (backLenses[lensIndex]?.tag || '1×') : '1×');
+  els.lensBtn.textContent = t;
+  els.lensBtn.style.opacity = (state.facing==='environment' && backLenses.length>1) ? '1' : '0.5';
 }
 
 /* ---- tap to set focus / exposure point ---- */
@@ -567,7 +647,14 @@ els.lookBtn.addEventListener('click', cycleLook);
 els.lookCell.addEventListener('click', cycleLook);
 els.adjBtn.addEventListener('click', ()=>els.panel.classList.toggle('open'));
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>els.panel.classList.add('open')));
-els.flipBtn.addEventListener('click', ()=>{ state.facing = state.facing==='environment'?'user':'environment'; start(); });
+els.flipBtn.addEventListener('click', ()=>{ state.facing = state.facing==='environment'?'user':'environment'; updateLensBtn(); start(); });
+els.lensBtn.addEventListener('click', ()=>{
+  if(state.facing!=='environment'){ state.facing='environment'; updateLensBtn(); start(); return; }
+  if(backLenses.length<=1){ toast('Only one lens available'); return; }
+  lensIndex = (lensIndex+1) % backLenses.length;
+  updateLensBtn(); toast('LENS '+backLenses[lensIndex].tag);
+  start();
+});
 els.gridBtn.addEventListener('click', ()=>{
   state.grid = !state.grid;
   els.grid.classList.toggle('on', state.grid);
