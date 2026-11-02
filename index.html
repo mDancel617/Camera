@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="M-Cam">
 <meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
 <title>M-Cam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +37,8 @@
   .brackets .br{bottom:0;right:0;border-left:0;border-top:0}
 
   .top{position:absolute; top:0; left:0; right:0; display:flex; align-items:center;
-    justify-content:space-between; gap:10px; padding:calc(env(safe-area-inset-top) + 12px) 18px 10px;
+    justify-content:space-between; gap:10px;
+    padding:calc(env(safe-area-inset-top) + 12px) max(18px,env(safe-area-inset-right)) 10px max(18px,env(safe-area-inset-left));
     font-family:var(--mono); font-size:11px; letter-spacing:1px}
   .top .mode{color:var(--accent); font-weight:700; min-width:30px}
   .top button{all:unset; cursor:pointer; color:var(--fg); font-family:var(--mono); font-size:11px; letter-spacing:1px}
@@ -64,7 +68,8 @@
   .count.on{display:flex}
 
   .bottom{position:absolute; left:0; right:0; bottom:0;
-    padding:10px 0 calc(env(safe-area-inset-bottom) + 18px); display:flex; flex-direction:column; gap:8px}
+    padding:10px max(0px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 18px) max(0px,env(safe-area-inset-left));
+    display:flex; flex-direction:column; gap:8px}
 
   .readout{display:flex; align-items:stretch; justify-content:space-around;
     background:var(--panel); backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px); padding:9px 8px}
@@ -127,6 +132,20 @@
     font-weight:700; letter-spacing:2px; font-size:13px; padding:14px; border-radius:30px}
   .sheet .save{background:#fff; color:#000}
   .sheet .back{border:1.5px solid rgba(255,255,255,.4); color:#fff}
+
+  /* landscape: keep the whole control cluster compact so the viewfinder stays large */
+  @media (orientation:landscape) and (max-height:520px){
+    .bottom{padding-bottom:calc(env(safe-area-inset-bottom) + 8px); gap:5px}
+    .readout{padding:5px 8px}
+    .cell .v{font-size:13px}
+    .bar{padding-top:2px}
+    .shutter{width:60px; height:60px; border-width:2.5px}
+    .shutter .core{width:48px; height:48px}
+    .round{width:44px; height:44px; font-size:12px}
+    .count{font-size:84px}
+    .panel{max-height:62vh}
+    .overlay h1{font-size:38px}
+  }
 </style>
 </head>
 <body>
@@ -295,7 +314,13 @@ void main(){
   c *= uExpose;                      // exposure triangle result
   c.r *= (1.0 + uWB*0.012);          // warmth
   c.b *= (1.0 - uWB*0.012);
-  vec3 pre = clamp(c,0.0,1.0);
+  // highlight soft-knee: shadows and midtones stay linear, highlights roll off
+  // smoothly toward white so a big exposure push can never explode into false
+  // color. This is what stops the neon/posterized blow-out.
+  vec3 knee = vec3(0.82);
+  vec3 over = max(c - knee, 0.0);
+  c = min(c, knee) + (1.0 - knee) * (1.0 - exp(-over / (1.0 - knee)));
+  vec3 pre = clamp(c, 0.0, 1.0);
 
   float toe=0.02, contrast=1.06, shoulder=0.10, sat=1.0;
   vec3 chMul=vec3(1.0), sh=vec3(0.0), hi=vec3(0.0), monoW=vec3(0.299,0.587,0.114);
@@ -395,9 +420,13 @@ function exposure(){
   const evShut = Math.log2(t / REF.t);      // longer = brighter
   const evIso  = Math.log2(iso / REF.iso);  // higher = brighter
   const ev = evAper + evShut + evIso;
-  const grain = Math.max(0, Math.log2(iso/REF.iso)) * 0.013;       // ISO -> grain
-  const vignette = Math.max(0, Math.log2(REF.f / f)) * 0.14;       // wide -> vignette
-  return { ev, expose: Math.pow(2, ev), grain, vignette };
+  // Damp and cap the digital gain: the phone already auto-exposes, so a raw
+  // 5-stop push just amplifies noise. We keep the EV readout honest but apply
+  // a gentler, bounded gain; the highlight knee in the shader handles the rest.
+  const evGain = Math.max(-3, Math.min(3, ev)) * 0.7;
+  const grain = Math.min(Math.max(0, Math.log2(iso/REF.iso)) * 0.010, 0.055); // ISO -> grain
+  const vignette = Math.max(0, Math.log2(REF.f / f)) * 0.14;                   // wide -> vignette
+  return { ev, expose: Math.pow(2, evGain), grain, vignette };
 }
 
 function setUniforms(g, u, expo, forCapture){
