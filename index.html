@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>M-Cam</title>
+<style>
+  /* ---- design tokens (committed dark: a camera viewfinder) ---- */
+  :root{
+    --bg:#000; --panel:rgba(0,0,0,.42); --line:rgba(255,255,255,.16);
+    --fg:#fff; --dim:rgba(255,255,255,.55); --accent:#f2c14e; /* warm amber */
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sys:-apple-system,system-ui,"Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--fg); font-family:var(--sys);
+    overflow:hidden; position:fixed; inset:0; user-select:none;
+    -webkit-user-select:none; touch-action:manipulation;
+  }
+  #stage{position:absolute; inset:0; overflow:hidden}
+  #view{position:absolute; inset:0; width:100%; height:100%; display:block; background:#000}
+
+  /* bright-line corner brackets */
+  .brackets{position:absolute; inset:max(18px,env(safe-area-inset-top)) 18px 18px 18px; pointer-events:none}
+  .brackets i{position:absolute; width:26px; height:26px; border:1px solid rgba(255,255,255,.38)}
+  .brackets .tl{top:0;left:0;border-right:0;border-bottom:0}
+  .brackets .tr{top:0;right:0;border-left:0;border-bottom:0}
+  .brackets .bl{bottom:0;left:0;border-right:0;border-top:0}
+  .brackets .br{bottom:0;right:0;border-left:0;border-top:0}
+
+  /* top strip */
+  .top{position:absolute; top:0; left:0; right:0; display:flex; align-items:center;
+    justify-content:space-between; gap:12px;
+    padding:calc(env(safe-area-inset-top) + 12px) 20px 10px;
+    font-family:var(--mono); font-size:12px; letter-spacing:1px}
+  .top .mode{color:var(--accent); font-weight:700; width:20px}
+  .top button{all:unset; cursor:pointer; color:var(--fg); font-family:var(--mono);
+    font-size:12px; letter-spacing:1px}
+  .top .look{color:var(--fg); font-weight:700; text-align:right; min-width:40px}
+
+  /* bottom cluster */
+  .bottom{position:absolute; left:0; right:0; bottom:0;
+    padding:10px 0 calc(env(safe-area-inset-bottom) + 18px);
+    display:flex; flex-direction:column; gap:8px}
+
+  .readout{display:flex; align-items:stretch; justify-content:space-around;
+    background:var(--panel); backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    padding:9px 8px; margin:0 0 2px}
+  .cell{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+    border-right:1px solid var(--line)}
+  .cell:last-child{border-right:0}
+  .cell .k{font-family:var(--mono); font-size:9px; letter-spacing:1.5px; color:var(--dim)}
+  .cell .v{font-family:var(--mono); font-size:15px; font-weight:600}
+  .cell button{all:unset; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px}
+
+  .bar{display:flex; align-items:center; justify-content:space-between; padding:4px 28px 0}
+  .round{width:52px; height:52px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-family:var(--mono); font-weight:700; font-size:14px; cursor:pointer}
+  .ghost{border:1.5px solid rgba(255,255,255,.4); color:#fff; background:transparent}
+  .solid{background:#fff; color:#000}
+  .shutter{width:74px; height:74px; border-radius:50%; border:3px solid #fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; background:transparent}
+  .shutter .core{width:60px; height:60px; border-radius:50%; background:#fff; transition:transform .1s}
+  .shutter:active .core{transform:scale(.85)}
+
+  /* adjust panel */
+  .panel{display:none; margin:0 16px; padding:16px;
+    background:var(--panel); backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-radius:16px; flex-direction:column; gap:14px}
+  .panel.open{display:flex}
+  .row{display:flex; flex-direction:column; gap:5px}
+  .row .lbl{display:flex; justify-content:space-between; font-family:var(--mono);
+    font-size:10px; letter-spacing:1.5px; color:var(--dim)}
+  .row .lbl b{color:var(--accent); font-weight:600}
+  input[type=range]{-webkit-appearance:none; appearance:none; height:3px; border-radius:2px;
+    background:rgba(255,255,255,.3); width:100%}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:22px; height:22px;
+    border-radius:50%; background:#fff}
+  .note{font-family:var(--mono); font-size:9.5px; color:var(--dim); line-height:1.5; letter-spacing:.5px}
+
+  /* toast */
+  .toast{position:absolute; left:50%; bottom:180px; transform:translateX(-50%);
+    background:rgba(0,0,0,.6); color:#fff; font-family:var(--mono); font-size:12px;
+    letter-spacing:2px; padding:8px 14px; border-radius:20px; opacity:0; transition:opacity .2s; pointer-events:none}
+  .toast.show{opacity:1}
+  .flash{position:absolute; inset:0; background:#000; opacity:0; pointer-events:none}
+  .flash.go{animation:fl .14s ease-out}
+  @keyframes fl{0%{opacity:1}100%{opacity:0}}
+
+  /* start / error overlay */
+  .overlay{position:absolute; inset:0; background:#000; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; text-align:center; padding:0 36px; z-index:5}
+  .overlay h1{font-family:var(--mono); font-weight:700; letter-spacing:4px; font-size:22px; margin:0}
+  .overlay p{color:var(--dim); font-size:13px; line-height:1.6; margin:0; max-width:300px}
+  .overlay button{all:unset; cursor:pointer; font-family:var(--mono); font-weight:700; letter-spacing:2px;
+    background:#fff; color:#000; padding:14px 28px; border-radius:30px}
+
+  /* captured-image sheet (for saving on iOS) */
+  .sheet{position:absolute; inset:0; background:#000; z-index:6; display:none; flex-direction:column}
+  .sheet.open{display:flex}
+  .sheet img{flex:1; width:100%; object-fit:contain; min-height:0}
+  .sheet .sbar{display:flex; gap:12px; padding:16px 16px calc(env(safe-area-inset-bottom) + 16px)}
+  .sheet .sbar button{flex:1; all:unset; cursor:pointer; text-align:center; font-family:var(--mono);
+    font-weight:700; letter-spacing:2px; font-size:13px; padding:14px; border-radius:30px}
+  .sheet .save{background:#fff; color:#000}
+  .sheet .back{border:1.5px solid rgba(255,255,255,.4); color:#fff}
+  .sheet .hint{font-family:var(--mono); font-size:10px; color:var(--dim); text-align:center;
+    padding:0 16px 8px; letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="view"></canvas>
+  <div class="brackets"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+
+  <div class="top">
+    <div class="mode" id="modeTag">A</div>
+    <button id="flipBtn">FLIP</button>
+    <div class="look" id="lookTag">CLS</div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="bottom">
+    <div class="panel" id="panel">
+      <div class="row">
+        <div class="lbl"><span>EXPOSURE</span><b id="evVal">0.0 EV</b></div>
+        <input type="range" id="ev" min="-2" max="2" step="0.1" value="0">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>WARMTH</span><b id="wbVal">0</b></div>
+        <input type="range" id="wb" min="-10" max="10" step="1" value="0">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>LOOK STRENGTH</span><b id="intVal">100%</b></div>
+        <input type="range" id="int" min="0" max="100" step="5" value="100">
+      </div>
+      <div class="note">These are digital adjustments. Safari doesn't give web apps the sensor's
+        true ISO/shutter or RAW — for those you'd need the native build.</div>
+    </div>
+
+    <div class="readout">
+      <div class="cell"><button data-panel><span class="k">EXP</span><span class="v" id="rEv">0.0</span></button></div>
+      <div class="cell"><button data-panel><span class="k">WB</span><span class="v" id="rWb">0</span></button></div>
+      <div class="cell"><button data-panel><span class="k">LOOK</span><span class="v" id="rLook">CLS</span></button></div>
+      <div class="cell"><button data-panel><span class="k">STR</span><span class="v" id="rInt">100</span></button></div>
+    </div>
+
+    <div class="bar">
+      <div class="round ghost" id="adjBtn">±</div>
+      <div class="shutter" id="shutter"><div class="core"></div></div>
+      <div class="round solid" id="lookBtn">CLS</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <img id="shot" alt="Captured photo">
+  <div class="hint" id="sheetHint">Tap Save to send it to Photos.</div>
+  <div class="sbar">
+    <button class="back" id="backBtn">BACK</button>
+    <button class="save" id="saveBtn">SAVE</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <h1>M·CAM</h1>
+  <p id="ovText">A minimal camera with a filmic, Leica-inspired look baked in. Tap below and allow camera access.</p>
+  <button id="startBtn">START CAMERA</button>
+</div>
+
+<script>
+/* ============================================================
+   M-Cam web — minimal camera with a Leica-inspired look engine.
+   Live grade runs in a WebGL fragment shader (fast on iPhone).
+   The same shader renders the full-resolution capture, so the
+   saved file matches the viewfinder.
+   ============================================================ */
+
+const LOOKS = ["classic","contemporary","monochrome"];
+const LOOK_LABEL = {classic:"CLS", contemporary:"CNT", monochrome:"B&W"};
+let lookIndex = 0;
+
+const state = { ev:0, wb:0, intensity:1.0, facing:"environment" };
+
+const els = {
+  view:document.getElementById('view'),
+  overlay:document.getElementById('overlay'), ovText:document.getElementById('ovText'),
+  startBtn:document.getElementById('startBtn'),
+  shutter:document.getElementById('shutter'), flash:document.getElementById('flash'),
+  toast:document.getElementById('toast'),
+  lookBtn:document.getElementById('lookBtn'), lookTag:document.getElementById('lookTag'),
+  rLook:document.getElementById('rLook'),
+  adjBtn:document.getElementById('adjBtn'), panel:document.getElementById('panel'),
+  flipBtn:document.getElementById('flipBtn'),
+  ev:document.getElementById('ev'), wb:document.getElementById('wb'), int:document.getElementById('int'),
+  evVal:document.getElementById('evVal'), wbVal:document.getElementById('wbVal'), intVal:document.getElementById('intVal'),
+  rEv:document.getElementById('rEv'), rWb:document.getElementById('rWb'), rInt:document.getElementById('rInt'),
+  sheet:document.getElementById('sheet'), shot:document.getElementById('shot'),
+  saveBtn:document.getElementById('saveBtn'), backBtn:document.getElementById('backBtn'),
+  sheetHint:document.getElementById('sheetHint'),
+};
+
+let video, stream, gl, program, tex, uni, raf;
+
+/* ---------- WebGL ---------- */
+const VERT = `
+attribute vec2 p; varying vec2 uv;
+uniform vec2 uScale;
+void main(){ uv = (p*0.5+0.5); uv = (uv-0.5)*uScale+0.5; gl_Position = vec4(p,0.,1.); }`;
+
+const FRAG = `
+precision highp float;
+varying vec2 uv;
+uniform sampler2D tex;
+uniform int uLook;
+uniform float uEV, uWB, uIntensity;
+uniform bool uFlip;
+
+vec3 toLum(vec3 c){ float l = dot(c, vec3(0.2126,0.7152,0.0722)); return vec3(l); }
+
+// filmic-ish tone: lifted toe, firm mid, soft shoulder
+vec3 filmic(vec3 c, float toe, float contrast, float shoulder){
+  c = mix(vec3(toe), vec3(1.0), c);                 // lift blacks
+  c = (c - 0.5) * contrast + 0.5;                   // mid contrast
+  c = c - pow(max(c,0.0), vec3(3.0)) * shoulder;    // soften highs
+  return clamp(c, 0.0, 1.0);
+}
+
+void main(){
+  vec2 st = uv;
+  if(uFlip) st.x = 1.0 - st.x;
+  if(st.x<0.0||st.x>1.0||st.y<0.0||st.y>1.0){ gl_FragColor=vec4(0.,0.,0.,1.); return; }
+  vec3 c = texture2D(tex, st).rgb;
+  vec3 orig = c;
+
+  // digital exposure
+  c *= pow(2.0, uEV);
+
+  // user warmth
+  c.r *= (1.0 + uWB*0.012);
+  c.b *= (1.0 - uWB*0.012);
+
+  float sat = 1.0; vec3 shadowTint=vec3(0.0); vec3 hiTint=vec3(0.0);
+
+  if(uLook==0){ // classic — warm Kodachrome lean
+    c.r *= 1.03; c.b *= 0.98;
+    c = filmic(c, 0.02, 1.10, 0.10);
+    sat = 0.95;
+    shadowTint = vec3(0.00,0.018,0.028);
+    hiTint     = vec3(0.022,0.012,0.0);
+    // warm vibrance: push saturation where red dominates
+    float warm = clamp(c.r - c.b, 0.0, 1.0);
+    sat += warm*0.12;
+  } else if(uLook==1){ // contemporary — cooler, cleaner
+    c.b *= 1.02;
+    c = filmic(c, 0.028, 1.05, 0.10);
+    sat = 0.88;
+    shadowTint = vec3(0.004,0.016,0.026);
+    hiTint     = vec3(0.016,0.014,0.006);
+  } else { // monochrome
+    float l = dot(c, vec3(0.32,0.52,0.16)); // red-sensitive panchromatic
+    c = vec3(l);
+    c = filmic(c, 0.015, 1.12, 0.08);
+    sat = 0.0;
+    shadowTint = vec3(0.0,0.006,0.012);
+    hiTint     = vec3(0.012,0.009,0.0);
+  }
+
+  // saturation
+  float l = dot(c, vec3(0.2126,0.7152,0.0722));
+  c = mix(vec3(l), c, sat);
+
+  // split tone
+  c += shadowTint * (1.0 - l) + hiTint * l;
+
+  c = clamp(c, 0.0, 1.0);
+  c = mix(orig, c, uIntensity);   // look strength
+  gl_FragColor = vec4(c, 1.0);
+}`;
+
+function compile(type, src){
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+
+function initGL(){
+  gl = els.view.getContext('webgl', {preserveDrawingBuffer:true, antialias:false});
+  if(!gl) throw new Error('WebGL unavailable');
+  program = gl.createProgram();
+  gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(program); gl.useProgram(program);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const p = gl.getAttribLocation(program,'p');
+  gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p, 2, gl.FLOAT, false, 0, 0);
+
+  tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  uni = {
+    scale:gl.getUniformLocation(program,'uScale'),
+    look:gl.getUniformLocation(program,'uLook'),
+    ev:gl.getUniformLocation(program,'uEV'),
+    wb:gl.getUniformLocation(program,'uWB'),
+    intensity:gl.getUniformLocation(program,'uIntensity'),
+    flip:gl.getUniformLocation(program,'uFlip'),
+  };
+}
+
+// cover-fit UV scale from canvas aspect vs video aspect
+function coverScale(cw, ch, vw, vh){
+  const ca = cw/ch, va = vw/vh;
+  return (ca > va) ? [1.0, va/ca] : [ca/va, 1.0];
+}
+
+function render(){
+  raf = requestAnimationFrame(render);
+  if(!video || video.readyState < 2) return;
+
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const w = Math.floor(els.view.clientWidth*dpr), h = Math.floor(els.view.clientHeight*dpr);
+  if(els.view.width!==w || els.view.height!==h){ els.view.width=w; els.view.height=h; }
+  gl.viewport(0,0,w,h);
+
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
+
+  const [sx,sy] = coverScale(w,h, video.videoWidth, video.videoHeight);
+  gl.uniform2f(uni.scale, sx, sy);
+  gl.uniform1i(uni.look, lookIndex);
+  gl.uniform1f(uni.ev, state.ev);
+  gl.uniform1f(uni.wb, state.wb);
+  gl.uniform1f(uni.intensity, state.intensity);
+  gl.uniform1i(uni.flip, state.facing==='user' ? 1 : 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+/* ---------- camera ---------- */
+async function start(){
+  try{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ideal:state.facing},
+              width:{ideal:4096}, height:{ideal:2160} },
+      audio:false
+    });
+    if(!video){ video = document.createElement('video');
+      video.setAttribute('playsinline',''); video.muted = true; }
+    video.srcObject = stream;
+    await video.play();
+    if(!gl) initGL();
+    els.overlay.style.display='none';
+    cancelAnimationFrame(raf); render();
+  }catch(e){
+    els.overlay.style.display='flex';
+    els.ovText.textContent = 'Camera access was blocked or unavailable. '
+      + 'Open this page in Safari over https, and allow the camera when asked. ('+ (e.name||e.message) +')';
+  }
+}
+
+/* ---------- capture ---------- */
+function capture(){
+  if(!video || video.readyState<2) return;
+  els.flash.classList.remove('go'); void els.flash.offsetWidth; els.flash.classList.add('go');
+
+  // render the current frame at full sensor resolution into an offscreen GL canvas
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const off = document.createElement('canvas'); off.width = vw; off.height = vh;
+  const g = off.getContext('webgl', {preserveDrawingBuffer:true});
+  const prog = g.createProgram();
+  const cs=(t,s)=>{const sh=g.createShader(t);g.shaderSource(sh,s);g.compileShader(sh);return sh;};
+  g.attachShader(prog, cs(g.VERTEX_SHADER, VERT));
+  g.attachShader(prog, cs(g.FRAGMENT_SHADER, FRAG));
+  g.linkProgram(prog); g.useProgram(prog);
+  const b=g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER,b);
+  g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),g.STATIC_DRAW);
+  const pl=g.getAttribLocation(prog,'p'); g.enableVertexAttribArray(pl); g.vertexAttribPointer(pl,2,g.FLOAT,false,0,0);
+  const tx=g.createTexture(); g.bindTexture(g.TEXTURE_2D,tx);
+  g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);
+  g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+  g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR);
+  g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);
+  g.texImage2D(g.TEXTURE_2D,0,g.RGB,g.RGB,g.UNSIGNED_BYTE,video);
+  g.viewport(0,0,vw,vh);
+  g.uniform2f(g.getUniformLocation(prog,'uScale'),1,1);
+  g.uniform1i(g.getUniformLocation(prog,'uLook'),lookIndex);
+  g.uniform1f(g.getUniformLocation(prog,'uEV'),state.ev);
+  g.uniform1f(g.getUniformLocation(prog,'uWB'),state.wb);
+  g.uniform1f(g.getUniformLocation(prog,'uIntensity'),state.intensity);
+  g.uniform1i(g.getUniformLocation(prog,'uFlip'), state.facing==='user'?1:0);
+  g.drawArrays(g.TRIANGLE_STRIP,0,4);
+
+  off.toBlob(blob=>{ if(blob) presentShot(blob); }, 'image/jpeg', 0.95);
+}
+
+let lastBlob=null, lastURL=null;
+function presentShot(blob){
+  lastBlob = blob;
+  if(lastURL) URL.revokeObjectURL(lastURL);
+  lastURL = URL.createObjectURL(blob);
+  els.shot.src = lastURL;
+  els.sheet.classList.add('open');
+}
+
+async function saveShot(){
+  if(!lastBlob) return;
+  const file = new File([lastBlob], `mcam_${Date.now()}.jpg`, {type:'image/jpeg'});
+  // iOS: Web Share lets the user save straight to Photos.
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file]}); return; }
+    catch(e){ /* user cancelled or unsupported — fall through */ }
+  }
+  // Fallback: show the image for a long-press "Add to Photos".
+  els.sheetHint.textContent = 'Press and hold the photo above, then "Add to Photos" / "Save Image".';
+}
+
+/* ---------- UI ---------- */
+function toast(msg){
+  els.toast.textContent = msg; els.toast.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>els.toast.classList.remove('show'), 1400);
+}
+function syncLook(){
+  const l = LOOK_LABEL[LOOKS[lookIndex]];
+  els.lookBtn.textContent = l; els.lookTag.textContent = l; els.rLook.textContent = l;
+}
+function cycleLook(){ lookIndex = (lookIndex+1)%LOOKS.length; syncLook(); toast(LOOKS[lookIndex].toUpperCase()); }
+function syncVals(){
+  els.evVal.textContent = (state.ev>=0?'+':'')+state.ev.toFixed(1)+' EV';
+  els.wbVal.textContent = (state.wb>0?'+':'')+state.wb;
+  els.intVal.textContent = Math.round(state.intensity*100)+'%';
+  els.rEv.textContent = (state.ev>=0?'+':'')+state.ev.toFixed(1);
+  els.rWb.textContent = (state.wb>0?'+':'')+state.wb;
+  els.rInt.textContent = Math.round(state.intensity*100);
+}
+
+els.startBtn.addEventListener('click', start);
+els.shutter.addEventListener('click', capture);
+els.lookBtn.addEventListener('click', cycleLook);
+els.adjBtn.addEventListener('click', ()=>els.panel.classList.toggle('open'));
+document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>els.panel.classList.toggle('open')));
+els.flipBtn.addEventListener('click', ()=>{ state.facing = state.facing==='environment'?'user':'environment'; start(); });
+els.ev.addEventListener('input', e=>{ state.ev=+e.target.value; syncVals(); });
+els.wb.addEventListener('input', e=>{ state.wb=+e.target.value; syncVals(); });
+els.int.addEventListener('input', e=>{ state.intensity=(+e.target.value)/100; syncVals(); });
+els.saveBtn.addEventListener('click', saveShot);
+els.backBtn.addEventListener('click', ()=>{ els.sheet.classList.remove('open');
+  els.sheetHint.textContent='Tap Save to send it to Photos.'; });
+
+syncLook(); syncVals();
+if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+  els.ovText.textContent = 'This browser can\'t open the camera. Use Safari on iPhone, opened over an https link.';
+  els.startBtn.disabled = true;
+}
+</script>
+</body>
+</html>
