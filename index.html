@@ -100,6 +100,9 @@
     color:var(--dim); border:1px solid var(--line); padding:5px 9px; border-radius:20px}
   .loadlut{all:unset; cursor:pointer; text-align:center; font-family:var(--mono); font-size:11px;
     letter-spacing:1px; color:var(--fg); border:1px solid var(--line); padding:10px; border-radius:12px}
+  .camsel{width:100%; font-family:var(--mono); font-size:12px; color:#fff; background:rgba(0,0,0,.5);
+    border:1px solid var(--line); border-radius:10px; padding:9px 10px; -webkit-appearance:none; appearance:none}
+  .camsel option{color:#000}
   .row{display:flex; flex-direction:column; gap:5px}
   .row .lbl{display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px;
     letter-spacing:1.5px; color:var(--dim)}
@@ -117,6 +120,18 @@
     background:rgba(0,0,0,.42); padding:4px 11px; border-radius:14px; pointer-events:none;
     font-variant-numeric:tabular-nums; display:none}
   .fl.on{display:block}
+
+  /* recording indicator */
+  .rec{position:absolute; top:calc(env(safe-area-inset-top) + 46px); left:50%; transform:translateX(-50%);
+    display:none; align-items:center; gap:7px; font-family:var(--mono); font-size:12px; color:#fff;
+    background:rgba(0,0,0,.52); padding:5px 12px; border-radius:16px; font-variant-numeric:tabular-nums}
+  .rec.on{display:flex}
+  .rec .dot{width:9px; height:9px; border-radius:50%; background:#e3433a; animation:blink 1s steps(2,start) infinite}
+  @keyframes blink{50%{opacity:.2}}
+  .shutter.vid{border-color:#e3433a}
+  .shutter.vid .core{background:#e3433a}
+  .shutter.recording .core{border-radius:8px; width:28px; height:28px}
+  .sheet video{flex:1; width:100%; min-height:0; background:#000}
 
   .toast{position:absolute; left:50%; bottom:190px; transform:translateX(-50%); background:rgba(0,0,0,.62);
     color:#fff; font-family:var(--mono); font-size:12px; letter-spacing:2px; padding:8px 14px; border-radius:20px;
@@ -195,10 +210,12 @@
   <div class="reticle" id="reticle"></div>
   <div class="count" id="count"></div>
   <div class="fl" id="flLabel">≈26mm</div>
+  <div class="rec" id="recTag"><span class="dot"></span><span id="recTime">0:00</span></div>
 
   <div class="top">
     <div class="mode" id="modeTag">PRO</div>
     <div class="tbtns">
+      <button id="modeBtn">PHOTO</button>
       <button id="flipBtn">FLIP</button>
       <button id="lensBtn">1×</button>
       <button id="torchBtn">FLASH</button>
@@ -216,6 +233,17 @@
       <div class="phead">
         <div class="ev" id="evReadout">0.0 EV</div>
         <button id="resetBtn">RESET</button>
+      </div>
+      <div class="row">
+        <div class="lbl"><span>CAMERA</span><b id="rescanBtn" style="cursor:pointer">⟳ rescan</b></div>
+        <select id="camSel" class="camsel"><option value="">Auto (rear)</option></select>
+      </div>
+      <div class="row">
+        <div class="lbl"><span>VIDEO SIZE</span></div>
+        <select id="resSel" class="camsel">
+          <option value="hd">HD · 1080p</option>
+          <option value="4k">4K · 2160p</option>
+        </select>
       </div>
       <div class="row">
         <div class="lbl"><span>APERTURE</span><b id="fVal">ƒ/5.6</b></div>
@@ -270,6 +298,7 @@
 
 <div class="sheet" id="sheet">
   <img id="shot" alt="Captured photo">
+  <video id="shotVid" playsinline controls hidden></video>
   <div class="hint" id="sheetHint">Tap Save to send it to Photos.</div>
   <div class="sbar">
     <button class="back" id="backBtn">BACK</button>
@@ -304,8 +333,9 @@ const LOOKS = [
   {id:8,  name:"FADED",    tag:"FAD"},  // milky, lifted-black faded film
   {id:9,  name:"X-PRO",    tag:"XPR"},  // cross-process, punchy & skewed
   {id:10, name:"WARM",     tag:"WRM"},  // warm soft portrait
+  {id:11, name:"LOG",      tag:"LOG"},  // flat, gradeable picture profile
 ];
-const BUILTIN_ROWS = 11;   // rows baked into lutatlas.png
+const BUILTIN_ROWS = 12;   // rows baked into lutatlas.png
 let lookIndex = 0;
 
 /* ---- exposure triangle stops ---- */
@@ -321,7 +351,10 @@ const state = {
   zoom:1.0,                // digital zoom (crops into the current lens)
   torch:false,
   focusUV:{x:0.5, y:0.5},  // where simulated DoF stays sharp (tap to move)
-  blurGain:1.0             // user tuning of depth-of-field strength
+  blurGain:1.0,            // user tuning of depth-of-field strength
+  deviceId:null,           // explicit camera chosen from the picker (any webcam)
+  mode:'photo',            // 'photo' | 'video'
+  recRes:'hd'              // 'hd' (1080p) | '4k' (2160p)
 };
 const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
 const ZOOM_MAX = 6;
@@ -342,8 +375,11 @@ const els = {
   reticle:el('reticle'), count:el('count'), flLabel:el('flLabel'),
   zoom:el('zoom'), zmVal:el('zmVal'), torchBtn:el('torchBtn'), devNote:el('devNote'),
   blur:el('blur'), blurVal:el('blurVal'),
-  lutLoadBtn:el('lutLoadBtn'), lutFile:el('lutFile'),
+  lutLoadBtn:el('lutLoadBtn'), lutFile:el('lutFile'), camSel:el('camSel'),
+  modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
+  recTag:el('recTag'), recTime:el('recTime'), shotVid:el('shotVid'),
 };
+let recording=false, recSize=null, mediaRecorder=null, recChunks=[], audioStream=null, recTimer=null, recStartMs=0;
 
 let video, stream, track, gl, program, tex, uni, raf;
 let backLenses = [], lensIndex = 0;   // physical lenses (ultra-wide / wide / tele)
@@ -579,8 +615,9 @@ function setUniforms(g, u, expo, forCapture){
 function render(){
   raf = requestAnimationFrame(render);
   if(!video || video.readyState < 2) return;
-  const dpr = Math.min(window.devicePixelRatio||1, 2);
-  const w = Math.floor(els.view.clientWidth*dpr), h = Math.floor(els.view.clientHeight*dpr);
+  let w, h;
+  if(recording && recSize){ w=recSize.w; h=recSize.h; }
+  else { const dpr=Math.min(window.devicePixelRatio||1,2); w=Math.floor(els.view.clientWidth*dpr); h=Math.floor(els.view.clientHeight*dpr); }
   if(els.view.width!==w || els.view.height!==h){ els.view.width=w; els.view.height=h; }
   gl.viewport(0,0,w,h);
   gl.activeTexture(gl.TEXTURE0);
@@ -609,6 +646,7 @@ function render(){
 /* ---------- camera ---------- */
 function videoConstraints(){
   const dims = { width:{ideal:4096}, height:{ideal:2160} };
+  if(state.deviceId) return Object.assign({ deviceId:{exact:state.deviceId} }, dims); // explicit pick wins
   if(state.facing === 'user') return Object.assign({ facingMode:{ideal:'user'} }, dims);
   const lens = backLenses[lensIndex];
   return lens ? Object.assign({ deviceId:{exact:lens.id} }, dims)
@@ -645,6 +683,7 @@ async function start(){
     els.overlay.style.display='none';
     cancelAnimationFrame(raf); render();
     refreshLenses();
+    refreshCameras();
     if(caps.zoom) setZoom(state.zoom);  // re-apply zoom to new lens via hardware if available
   }catch(e){
     els.overlay.style.display='flex';
@@ -675,6 +714,25 @@ async function refreshLenses(){
     updateLensBtn();
   }catch(e){}
 }
+/* ---- full camera picker (any webcam / video input) ---- */
+async function refreshCameras(){
+  try{
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const cams = devs.filter(d=>d.kind==='videoinput');
+    const cur = (track && track.getSettings) ? (track.getSettings().deviceId||'') : '';
+    const sel = els.camSel;
+    sel.innerHTML = '<option value="">Auto (rear)</option>';
+    cams.forEach((d,i)=>{
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || ('Camera ' + (i+1));
+      sel.appendChild(o);
+    });
+    sel.value = state.deviceId || (state.deviceId===null && !state.facing ? '' : (state.deviceId || cur || ''));
+    if(state.deviceId) sel.value = state.deviceId; else sel.value = '';
+  }catch(e){}
+}
+
 function updateLensBtn(){
   const t = (state.facing==='user') ? 'FR'
           : (backLenses.length ? (backLenses[lensIndex]?.tag || '1×') : '1×');
@@ -688,10 +746,11 @@ function baseMM(){
   return FL_BASE[tag] || 26;
 }
 function updateFL(){
+  els.zmVal.textContent = state.zoom.toFixed(1) + '×';
+  if(state.deviceId){ els.flLabel.classList.remove('on'); return; } // mm is meaningless for an external cam
   const mm = Math.round(baseMM() * state.zoom);
   els.flLabel.textContent = '≈' + mm + 'mm';
   els.flLabel.classList.add('on');
-  els.zmVal.textContent = state.zoom.toFixed(1) + '×';
 }
 function setZoom(z){
   state.zoom = Math.min(Math.max(z, 1), ZOOM_MAX);
@@ -795,17 +854,95 @@ function doCapture(){
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
   off.toBlob(bl=>{ if(bl) presentShot(bl); }, 'image/jpeg', 0.95);
 }
+let lastName='photo.jpg', lastType='image/jpeg';
 function presentShot(blob){
-  lastBlob=blob; if(lastURL) URL.revokeObjectURL(lastURL);
-  lastURL=URL.createObjectURL(blob); els.shot.src=lastURL; els.sheet.classList.add('open');
+  lastBlob=blob; lastName=`mcam_${Date.now()}.jpg`; lastType='image/jpeg';
+  if(lastURL) URL.revokeObjectURL(lastURL);
+  lastURL=URL.createObjectURL(blob);
+  els.shotVid.hidden=true; els.shotVid.removeAttribute('src');
+  els.shot.hidden=false; els.shot.src=lastURL;
+  els.sheetHint.textContent='Tap Save to send it to Photos.';
+  els.sheet.classList.add('open');
+}
+function presentVideo(blob, ext, type){
+  lastBlob=blob; lastName=`mcam_${Date.now()}.${ext}`; lastType=type;
+  if(lastURL) URL.revokeObjectURL(lastURL);
+  lastURL=URL.createObjectURL(blob);
+  els.shot.hidden=true; els.shot.removeAttribute('src');
+  els.shotVid.hidden=false; els.shotVid.src=lastURL; els.shotVid.load();
+  els.sheetHint.textContent='Tap Save to send it to your library.';
+  els.sheet.classList.add('open');
 }
 async function saveShot(){
   if(!lastBlob) return;
-  const file=new File([lastBlob], `mcam_${Date.now()}.jpg`, {type:'image/jpeg'});
+  const file=new File([lastBlob], lastName, {type:lastType});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file]}); return; }catch(e){}
   }
-  els.sheetHint.textContent='Press and hold the photo above, then "Add to Photos" / "Save Image".';
+  els.sheetHint.textContent = lastType.startsWith('video')
+    ? 'Tap the video’s share control, or long-press it, to save.'
+    : 'Press and hold the photo above, then "Add to Photos" / "Save Image".';
+}
+
+/* ---------- video recording ---------- */
+function recordSize(){
+  const longEdge = state.recRes==='4k' ? 2160 : 1080;
+  const cw = els.view.clientWidth||1, ch = els.view.clientHeight||1;
+  let w, h;
+  if(cw >= ch){ w = longEdge; h = Math.round(longEdge * ch/cw); }
+  else { h = longEdge; w = Math.round(longEdge * cw/ch); }
+  w -= w%2; h -= h%2;   // even dimensions for codecs
+  return {w, h};
+}
+function pickMime(){
+  const c = ['video/mp4;codecs=h264','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for(const m of c){ if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; }
+  return '';
+}
+function fmtTime(ms){ const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+async function startRec(){
+  if(recording) return;
+  const grab = els.view.captureStream || els.view.mozCaptureStream;
+  if(!grab || !window.MediaRecorder){ toast('Video not supported in this browser'); return; }
+  recSize = recordSize();
+  recording = true;                       // render() resizes the canvas on the next frame
+  els.flLabel.classList.remove('on');
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));  // let the canvas resize + draw
+  let cstream;
+  try{ cstream = grab.call(els.view, 30); }
+  catch(e){ recording=false; toast('Cannot record this view'); return; }
+  // add microphone audio if allowed
+  try{
+    audioStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioStream.getAudioTracks().forEach(t=>cstream.addTrack(t));
+  }catch(e){ audioStream=null; }
+  const mime = pickMime();
+  try{
+    mediaRecorder = new MediaRecorder(cstream, mime ? {mimeType:mime, videoBitsPerSecond: state.recRes==='4k'?45000000:16000000} : undefined);
+  }catch(e){ recording=false; toast('Recorder error'); return; }
+  recChunks = [];
+  mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) recChunks.push(e.data); };
+  mediaRecorder.onstop = ()=>{
+    const type = (mediaRecorder.mimeType||mime||'video/webm').split(';')[0];
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(recChunks, {type});
+    presentVideo(blob, ext, type);
+  };
+  mediaRecorder.start();
+  recStartMs = Date.now();
+  els.shutterBtn.classList.add('recording');
+  els.recTag.classList.add('on'); els.recTime.textContent='0:00';
+  recTimer = setInterval(()=>{ els.recTime.textContent = fmtTime(Date.now()-recStartMs); }, 500);
+}
+function stopRec(){
+  if(!recording) return;
+  recording = false; recSize = null;
+  clearInterval(recTimer); recTimer=null;
+  els.shutterBtn.classList.remove('recording');
+  els.recTag.classList.remove('on');
+  try{ mediaRecorder && mediaRecorder.state!=='inactive' && mediaRecorder.stop(); }catch(e){}
+  if(audioStream){ audioStream.getTracks().forEach(t=>t.stop()); audioStream=null; }
 }
 
 /* ---------- UI ---------- */
@@ -829,19 +966,41 @@ function syncVals(){
 }
 
 els.startBtn.addEventListener('click', start);
-els.shutterBtn.addEventListener('click', capture);
+els.shutterBtn.addEventListener('click', ()=>{
+  if(state.mode==='photo') capture();
+  else if(recording) stopRec(); else startRec();
+});
+els.modeBtn.addEventListener('click', ()=>{
+  if(recording) stopRec();
+  state.mode = state.mode==='photo' ? 'video' : 'photo';
+  els.modeBtn.textContent = state.mode==='photo' ? 'PHOTO' : 'VIDEO';
+  els.modeBtn.classList.toggle('on', state.mode==='video');
+  els.shutterBtn.classList.toggle('vid', state.mode==='video');
+});
+els.resSel.addEventListener('change', e=>{ state.recRes = e.target.value; });
+els.rescanBtn.addEventListener('click', refreshCameras);
 els.lookBtn.addEventListener('click', cycleLook);
 els.lookCell.addEventListener('click', cycleLook);
-els.adjBtn.addEventListener('click', ()=>els.panel.classList.toggle('open'));
-document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>els.panel.classList.add('open')));
-els.flipBtn.addEventListener('click', ()=>{ state.facing = state.facing==='environment'?'user':'environment'; updateLensBtn(); start(); });
+els.adjBtn.addEventListener('click', ()=>{ const open=els.panel.classList.toggle('open'); if(open) refreshCameras(); });
+document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>{ els.panel.classList.add('open'); refreshCameras(); }));
+els.flipBtn.addEventListener('click', ()=>{ state.deviceId=null; state.facing = state.facing==='environment'?'user':'environment'; updateLensBtn(); start(); });
 els.lensBtn.addEventListener('click', ()=>{
+  state.deviceId=null;
   if(state.facing!=='environment'){ state.facing='environment'; setZoom(1); updateLensBtn(); start(); return; }
   if(backLenses.length<=1){ toast('Only one lens available'); return; }
   lensIndex = (lensIndex+1) % backLenses.length;
   setZoom(1); updateLensBtn(); toast('LENS '+backLenses[lensIndex].tag);
   start();
 });
+els.camSel.addEventListener('change', e=>{
+  const v = e.target.value;
+  state.deviceId = v || null;
+  if(!v) state.facing = 'environment';   // "Auto (rear)"
+  setZoom(1); start();
+});
+if(navigator.mediaDevices){
+  try{ navigator.mediaDevices.addEventListener('devicechange', refreshCameras); }catch(e){}
+}
 els.zoom.addEventListener('input', e=>setZoom(+e.target.value));
 els.blur.addEventListener('input', e=>{ state.blurGain=(+e.target.value)/100; els.blurVal.textContent=Math.round(state.blurGain*100)+'%'; });
 // fade the panel while dragging any slider so the live effect is visible
