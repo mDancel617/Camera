@@ -91,12 +91,15 @@
 
   .panel{display:none; margin:0 16px; padding:16px; background:var(--panel);
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px); border-radius:16px;
-    flex-direction:column; gap:13px; max-height:52vh; overflow-y:auto}
+    flex-direction:column; gap:13px; max-height:52vh; overflow-y:auto; transition:opacity .15s}
   .panel.open{display:flex}
+  .panel.peek{opacity:.16}   /* fades while dragging a slider so you can see the effect */
   .phead{display:flex; justify-content:space-between; align-items:center}
   .phead .ev{font-family:var(--mono); font-size:12px; color:var(--accent); font-weight:700}
   .phead button{all:unset; cursor:pointer; font-family:var(--mono); font-size:10px; letter-spacing:1px;
     color:var(--dim); border:1px solid var(--line); padding:5px 9px; border-radius:20px}
+  .loadlut{all:unset; cursor:pointer; text-align:center; font-family:var(--mono); font-size:11px;
+    letter-spacing:1px; color:var(--fg); border:1px solid var(--line); padding:10px; border-radius:12px}
   .row{display:flex; flex-direction:column; gap:5px}
   .row .lbl{display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px;
     letter-spacing:1.5px; color:var(--dim)}
@@ -107,6 +110,13 @@
   input[type=range]::-moz-range-thumb{width:24px; height:24px; border:0; border-radius:50%; background:#fff}
   .note{font-family:var(--mono); font-size:9.5px; color:var(--dim); line-height:1.5; letter-spacing:.3px}
   .divline{height:1px; background:var(--line); margin:2px 0}
+
+  /* live focal-length label */
+  .fl{position:absolute; top:calc(env(safe-area-inset-top) + 46px); left:50%; transform:translateX(-50%);
+    font-family:var(--mono); font-size:11px; letter-spacing:1px; color:var(--fg);
+    background:rgba(0,0,0,.42); padding:4px 11px; border-radius:14px; pointer-events:none;
+    font-variant-numeric:tabular-nums; display:none}
+  .fl.on{display:block}
 
   .toast{position:absolute; left:50%; bottom:190px; transform:translateX(-50%); background:rgba(0,0,0,.62);
     color:#fff; font-family:var(--mono); font-size:12px; letter-spacing:2px; padding:8px 14px; border-radius:20px;
@@ -184,12 +194,14 @@
   <div class="brackets"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
   <div class="reticle" id="reticle"></div>
   <div class="count" id="count"></div>
+  <div class="fl" id="flLabel">≈26mm</div>
 
   <div class="top">
     <div class="mode" id="modeTag">PRO</div>
     <div class="tbtns">
       <button id="flipBtn">FLIP</button>
       <button id="lensBtn">1×</button>
+      <button id="torchBtn">FLASH</button>
       <button id="gridBtn">GRID</button>
       <button id="timerBtn">T:OFF</button>
     </div>
@@ -210,12 +222,20 @@
         <input type="range" id="aper" min="0" max="7" step="1" value="4">
       </div>
       <div class="row">
+        <div class="lbl"><span>BLUR AMOUNT</span><b id="blurVal">100%</b></div>
+        <input type="range" id="blur" min="0" max="200" step="10" value="100">
+      </div>
+      <div class="row">
         <div class="lbl"><span>SHUTTER</span><b id="ssVal">1/125</b></div>
         <input type="range" id="shut" min="0" max="10" step="1" value="7">
       </div>
       <div class="row">
         <div class="lbl"><span>ISO</span><b id="isoVal">100</b></div>
         <input type="range" id="iso" min="0" max="6" step="1" value="0">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>ZOOM</span><b id="zmVal">1.0×</b></div>
+        <input type="range" id="zoom" min="1" max="6" step="0.1" value="1">
       </div>
       <div class="divline"></div>
       <div class="row">
@@ -226,9 +246,11 @@
         <div class="lbl"><span>LOOK STRENGTH</span><b id="intVal">100%</b></div>
         <input type="range" id="int" min="0" max="100" step="5" value="100">
       </div>
-      <div class="note">Aperture, shutter and ISO are simulated: they set exposure the way a real
-        camera would (the exposure triangle), ISO adds film grain, and aperture adds vignetting.
-        Safari can't drive the real sensor or give true background blur or RAW — that's the native build.</div>
+      <button id="lutLoadBtn" class="loadlut">＋ Load .cube film LUT</button>
+      <input type="file" id="lutFile" accept=".cube,.CUBE" hidden>
+      <div class="note" id="devNote">Shutter and ISO set exposure the way a real camera would (ISO also adds grain).
+        Aperture controls simulated depth-of-field blur around your focus point (tap the view to move it) plus vignetting —
+        iPhone glass is fixed, so this is the real creative control it offers. Checking what your device exposes…</div>
     </div>
 
     <div class="readout">
@@ -271,15 +293,19 @@
 
 /* ---- looks (original recipes, inspired by well-known film/color styles) ---- */
 const LOOKS = [
-  {id:0, name:"CLASSIC",  tag:"CLS"},  // warm Kodachrome-leaning
-  {id:1, name:"CONTEMP",  tag:"CNT"},  // cool, clean, modern
-  {id:2, name:"MONO",     tag:"BW"},   // neutral black & white
-  {id:3, name:"GOLD",     tag:"GLD"},  // warm consumer negative
-  {id:4, name:"CHROME",   tag:"CHR"},  // vivid slide film
-  {id:5, name:"PORTRAIT", tag:"POR"},  // soft pastel skin tones
-  {id:6, name:"CINE",     tag:"CIN"},  // teal-and-orange cinema
-  {id:7, name:"NOIR",     tag:"NOR"},  // high-contrast black & white
+  {id:0,  name:"CLASSIC",  tag:"CLS"},  // warm Kodachrome-leaning
+  {id:1,  name:"CONTEMP",  tag:"CNT"},  // cool, clean, modern
+  {id:2,  name:"MONO",     tag:"BW"},   // neutral black & white
+  {id:3,  name:"GOLD",     tag:"GLD"},  // warm consumer negative
+  {id:4,  name:"CHROME",   tag:"CHR"},  // vivid slide film
+  {id:5,  name:"PORTRAIT", tag:"POR"},  // soft pastel skin tones
+  {id:6,  name:"CINE",     tag:"CIN"},  // teal-and-orange cinema
+  {id:7,  name:"NOIR",     tag:"NOR"},  // high-contrast black & white
+  {id:8,  name:"FADED",    tag:"FAD"},  // milky, lifted-black faded film
+  {id:9,  name:"X-PRO",    tag:"XPR"},  // cross-process, punchy & skewed
+  {id:10, name:"WARM",     tag:"WRM"},  // warm soft portrait
 ];
+const BUILTIN_ROWS = 11;   // rows baked into lutatlas.png
 let lookIndex = 0;
 
 /* ---- exposure triangle stops ---- */
@@ -291,8 +317,14 @@ const REF = { f:5.6, t:1/125, iso:100 }; // 0 EV reference
 const state = {
   aper:4, shut:7, iso:0,   // indices
   wb:0, intensity:1.0, facing:"environment",
-  grid:false, timer:0      // timer: 0 / 3 / 10 seconds
+  grid:false, timer:0,     // timer: 0 / 3 / 10 seconds
+  zoom:1.0,                // digital zoom (crops into the current lens)
+  torch:false,
+  focusUV:{x:0.5, y:0.5},  // where simulated DoF stays sharp (tap to move)
+  blurGain:1.0             // user tuning of depth-of-field strength
 };
+const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
+const ZOOM_MAX = 6;
 const TIMERS = [0, 3, 10];
 
 const el = id => document.getElementById(id);
@@ -307,11 +339,70 @@ const els = {
   rSs:el('rSs'), rF:el('rF'), rIso:el('rIso'),
   sheet:el('sheet'), shot:el('shot'), saveBtn:el('saveBtn'), backBtn:el('backBtn'), sheetHint:el('sheetHint'),
   grid:el('grid'), gridBtn:el('gridBtn'), timerBtn:el('timerBtn'), lensBtn:el('lensBtn'),
-  reticle:el('reticle'), count:el('count'),
+  reticle:el('reticle'), count:el('count'), flLabel:el('flLabel'),
+  zoom:el('zoom'), zmVal:el('zmVal'), torchBtn:el('torchBtn'), devNote:el('devNote'),
+  blur:el('blur'), blurVal:el('blurVal'),
+  lutLoadBtn:el('lutLoadBtn'), lutFile:el('lutFile'),
 };
 
 let video, stream, track, gl, program, tex, uni, raf;
 let backLenses = [], lensIndex = 0;   // physical lenses (ultra-wide / wide / tele)
+let caps = {}, hwZoom = false;        // live hardware capabilities
+let lutImage = null, lutReady = false, lutTex = null, lutUploadedImg = null;
+
+// load the baked film-LUT atlas (8 looks)
+(function loadAtlas(){
+  const im = new Image();
+  im.onload = ()=>{ lutImage = im; lutReady = true; lutUploadedImg = null; };
+  im.onerror = ()=>{ lutReady = false; };
+  im.src = 'lutatlas.png';
+})();
+
+function uploadLutTo(g, texture, img){
+  g.activeTexture(g.TEXTURE1);
+  g.bindTexture(g.TEXTURE_2D, texture);
+  g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, false);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.NEAREST);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.NEAREST);
+  g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, img);
+  g.activeTexture(g.TEXTURE0);
+}
+
+// which LUT drives the current look
+function activeLut(){
+  const L = LOOKS[lookIndex];
+  if(L.custom) return { img:L.canvas, N:L.N, rows:1, row:0, ready:true };
+  return { img:lutImage, N:16, rows:BUILTIN_ROWS, row:L.id, ready:lutReady };
+}
+
+// parse an Adobe .cube 3D LUT into a strip canvas the shader can sample
+function parseCube(text){
+  const lines = text.split(/\r?\n/);
+  let N = 0; const data = [];
+  for(const ln of lines){
+    const s = ln.trim();
+    if(!s || s[0]==='#') continue;
+    if(/^TITLE/i.test(s) || /^DOMAIN_/i.test(s)) continue;
+    const m = /^LUT_3D_SIZE\s+(\d+)/i.exec(s);
+    if(m){ N = +m[1]; continue; }
+    if(/^LUT_1D_SIZE/i.test(s)) throw new Error('1D LUTs not supported');
+    const p = s.split(/\s+/).map(Number);
+    if(p.length>=3 && p.every(x=>!isNaN(x))) data.push(p);
+  }
+  if(!N || data.length !== N*N*N) throw new Error('bad cube');
+  const cv = document.createElement('canvas'); cv.width = N*N; cv.height = N;
+  const ctx = cv.getContext('2d'); const im = ctx.createImageData(N*N, N);
+  let i = 0;                       // .cube order: red fastest, then green, then blue
+  for(let b=0;b<N;b++) for(let g=0;g<N;g++) for(let r=0;r<N;r++){
+    const t = data[i++]; const x = b*N+r, y = g, o = (y*(N*N)+x)*4;
+    im.data[o]=Math.round(t[0]*255); im.data[o+1]=Math.round(t[1]*255);
+    im.data[o+2]=Math.round(t[2]*255); im.data[o+3]=255;
+  }
+  ctx.putImageData(im,0,0);
+  return { canvas:cv, N };
+}
 
 /* ---------- shaders ---------- */
 const VERT = `
@@ -324,22 +415,61 @@ varying vec2 uv;
 uniform sampler2D tex;
 uniform int uLook;
 uniform float uExpose, uWB, uIntensity, uGrain, uVignette, uSeed;
-uniform bool uFlip;
+uniform float uAperture, uAspect;
+uniform vec2 uFocus, uRes;
+uniform bool uFlip, uHasLut;
+uniform sampler2D uLut;         // film LUT atlas (NEAREST)
+uniform float uLutN, uLutRows;  // LUT size and number of look-rows in the atlas
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
 
-vec3 filmic(vec3 c, float toe, float contrast, float shoulder){
-  c = mix(vec3(toe), vec3(1.0), c);
-  c = (c - 0.5) * contrast + 0.5;
-  c = c - pow(max(c,0.0), vec3(3.0)) * shoulder;
-  return clamp(c, 0.0, 1.0);
+// Trilinear sample of a strip/atlas 3D LUT (NEAREST texture, interpolated here).
+// Atlas is laid out as tiles: x = blueTile*N + red, y = lookRow*N + green.
+vec3 lutSample(vec3 col){
+  float N = uLutN;
+  vec3 idx = clamp(col, 0.0, 1.0) * (N - 1.0);
+  float r0=floor(idx.r), g0=floor(idx.g), b0=floor(idx.b);
+  float r1=min(r0+1.0,N-1.0), g1=min(g0+1.0,N-1.0), b1=min(b0+1.0,N-1.0);
+  vec3 f = idx - vec3(r0,g0,b0);
+  float base = float(uLook) * N;
+  float W = N*N, Hh = N*uLutRows;
+  vec2 t000=vec2((b0*N+r0+0.5)/W,(base+g0+0.5)/Hh), t100=vec2((b0*N+r1+0.5)/W,(base+g0+0.5)/Hh);
+  vec2 t010=vec2((b0*N+r0+0.5)/W,(base+g1+0.5)/Hh), t110=vec2((b0*N+r1+0.5)/W,(base+g1+0.5)/Hh);
+  vec2 t001=vec2((b1*N+r0+0.5)/W,(base+g0+0.5)/Hh), t101=vec2((b1*N+r1+0.5)/W,(base+g0+0.5)/Hh);
+  vec2 t011=vec2((b1*N+r0+0.5)/W,(base+g1+0.5)/Hh), t111=vec2((b1*N+r1+0.5)/W,(base+g1+0.5)/Hh);
+  vec3 x00=mix(texture2D(uLut,t000).rgb,texture2D(uLut,t100).rgb,f.r);
+  vec3 x10=mix(texture2D(uLut,t010).rgb,texture2D(uLut,t110).rgb,f.r);
+  vec3 x01=mix(texture2D(uLut,t001).rgb,texture2D(uLut,t101).rgb,f.r);
+  vec3 x11=mix(texture2D(uLut,t011).rgb,texture2D(uLut,t111).rgb,f.r);
+  vec3 y0=mix(x00,x10,f.g), y1=mix(x01,x11,f.g);
+  return mix(y0,y1,f.b);
 }
 
 void main(){
   vec2 st = uv;
   if(uFlip) st.x = 1.0 - st.x;
   if(st.x<0.0||st.x>1.0||st.y<0.0||st.y>1.0){ gl_FragColor=vec4(0.,0.,0.,1.); return; }
-  vec3 c = texture2D(tex, st).rgb;
+
+  // simulated depth of field: sharp near the focus point, softer with a wider
+  // aperture and farther from focus (iPhone glass is fixed, so this is the real
+  // creative control an aperture gives you).
+  vec2 scr = gl_FragCoord.xy / uRes; scr.y = 1.0 - scr.y;
+  float fd = length(vec2((scr.x - uFocus.x) * uAspect, scr.y - uFocus.y));
+  float blur = uAperture * smoothstep(0.16, 0.62, fd);
+
+  vec3 c;
+  if(blur > 0.002){
+    vec3 acc = vec3(0.0);
+    for(int i=0;i<16;i++){
+      float a = float(i) * 2.39996;               // golden-angle spiral
+      float r = sqrt((float(i)+0.5)/16.0);
+      vec2 off = vec2(cos(a), sin(a)) * r * blur * 0.030;
+      acc += texture2D(tex, st + off).rgb;
+    }
+    c = acc / 16.0;
+  } else {
+    c = texture2D(tex, st).rgb;
+  }
 
   c *= uExpose;                      // exposure triangle result
   c.r *= (1.0 + uWB*0.012);          // warmth
@@ -352,47 +482,9 @@ void main(){
   c = min(c, knee) + (1.0 - knee) * (1.0 - exp(-over / (1.0 - knee)));
   vec3 pre = clamp(c, 0.0, 1.0);
 
-  float toe=0.02, contrast=1.06, shoulder=0.10, sat=1.0;
-  vec3 chMul=vec3(1.0), sh=vec3(0.0), hi=vec3(0.0), monoW=vec3(0.299,0.587,0.114);
-  bool mono=false;
-
-  if(uLook==0){            // CLASSIC
-    chMul=vec3(1.03,1.00,0.97); toe=0.02; contrast=1.10; shoulder=0.10; sat=1.02;
-    sh=vec3(0.0,0.015,0.028); hi=vec3(0.022,0.012,0.0);
-  } else if(uLook==1){     // CONTEMP
-    chMul=vec3(1.0,1.0,1.02); toe=0.028; contrast=1.04; shoulder=0.10; sat=0.88;
-    sh=vec3(0.004,0.016,0.026); hi=vec3(0.016,0.014,0.006);
-  } else if(uLook==2){     // MONO
-    mono=true; monoW=vec3(0.299,0.587,0.114); toe=0.02; contrast=1.08; shoulder=0.09; sat=0.0;
-    sh=vec3(0.0,0.006,0.012); hi=vec3(0.012,0.009,0.0);
-  } else if(uLook==3){     // GOLD
-    chMul=vec3(1.05,1.01,0.95); toe=0.035; contrast=1.02; shoulder=0.12; sat=1.05;
-    sh=vec3(0.012,0.014,0.0); hi=vec3(0.03,0.02,0.0);
-  } else if(uLook==4){     // CHROME
-    chMul=vec3(1.02,1.02,1.0); toe=0.015; contrast=1.15; shoulder=0.07; sat=1.25;
-    sh=vec3(0.0,0.006,0.02); hi=vec3(0.01,0.006,0.0);
-  } else if(uLook==5){     // PORTRAIT
-    chMul=vec3(1.02,1.0,1.0); toe=0.05; contrast=0.95; shoulder=0.14; sat=0.9;
-    sh=vec3(0.012,0.01,0.006); hi=vec3(0.03,0.02,0.008);
-  } else if(uLook==6){     // CINE
-    chMul=vec3(1.03,1.0,1.0); toe=0.03; contrast=1.06; shoulder=0.10; sat=0.95;
-    sh=vec3(0.0,0.02,0.035); hi=vec3(0.04,0.022,0.0);
-  } else {                 // NOIR
-    mono=true; monoW=vec3(0.32,0.52,0.16); toe=0.0; contrast=1.30; shoulder=0.05; sat=0.0;
-    sh=vec3(0.0,0.004,0.01); hi=vec3(0.02,0.014,0.0);
-  }
-
-  c *= chMul;
-  if(mono){ float l=dot(clamp(c,0.0,1.0), monoW); c=vec3(l); }
-  c = filmic(c, toe, contrast, shoulder);
-
-  float l = dot(c, vec3(0.2126,0.7152,0.0722));
-  c = mix(vec3(l), c, sat);
-  c += sh*(1.0-l) + hi*l;
-  c = clamp(c, 0.0, 1.0);
-
-  // look strength (does not touch exposure)
-  c = mix(pre, c, uIntensity);
+  // film look via LUT (table lookup) — more accurate than per-channel math
+  vec3 look = uHasLut ? lutSample(pre) : pre;
+  c = mix(pre, look, uIntensity);   // look strength (does not touch exposure)
 
   // aperture vignette
   vec2 d = uv - 0.5;
@@ -427,10 +519,14 @@ function buildProgram(g){
   g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR);
   g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);
   const u=n=>g.getUniformLocation(pr,n);
+  g.uniform1i(u('tex'), 0);   // video on texture unit 0
+  g.uniform1i(u('uLut'), 1);  // LUT on texture unit 1
   return {program:pr, tex:t, uni:{
     scale:u('uScale'), look:u('uLook'), expose:u('uExpose'), wb:u('uWB'),
     intensity:u('uIntensity'), grain:u('uGrain'), vignette:u('uVignette'),
-    seed:u('uSeed'), flip:u('uFlip')
+    seed:u('uSeed'), flip:u('uFlip'),
+    aperture:u('uAperture'), aspect:u('uAspect'), focus:u('uFocus'), res:u('uRes'),
+    lutN:u('uLutN'), lutRows:u('uLutRows'), hasLut:u('uHasLut')
   }};
 }
 
@@ -439,6 +535,14 @@ function initGL(){
   if(!gl) throw new Error('WebGL unavailable');
   const b = buildProgram(gl);
   program=b.program; tex=b.tex; uni=b.uni;
+  lutTex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, lutTex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.activeTexture(gl.TEXTURE0);
+  lutUploadedImg = null;
 }
 
 function coverScale(cw,ch,vw,vh){ const ca=cw/ch, va=vw/vh; return (ca>va)?[1,va/ca]:[ca/va,1]; }
@@ -456,11 +560,11 @@ function exposure(){
   const evGain = Math.max(-3, Math.min(3, ev)) * 0.7;
   const grain = Math.min(Math.max(0, Math.log2(iso/REF.iso)) * 0.010, 0.055); // ISO -> grain
   const vignette = Math.max(0, Math.log2(REF.f / f)) * 0.14;                   // wide -> vignette
-  return { ev, expose: Math.pow(2, evGain), grain, vignette };
+  const blur = Math.max(0, Math.log2(REF.f / f)) / 2 * state.blurGain;         // wide -> DoF blur
+  return { ev, expose: Math.pow(2, evGain), grain, vignette, blur };
 }
 
 function setUniforms(g, u, expo, forCapture){
-  g.uniform1i(u.look, LOOKS[lookIndex].id);
   g.uniform1f(u.expose, expo.expose);
   g.uniform1f(u.wb, state.wb);
   g.uniform1f(u.intensity, state.intensity);
@@ -468,6 +572,8 @@ function setUniforms(g, u, expo, forCapture){
   g.uniform1f(u.vignette, expo.vignette);
   g.uniform1f(u.seed, forCapture ? Math.random()*1000 : (performance.now()%1000));
   g.uniform1i(u.flip, state.facing==='user' ? 1 : 0);
+  g.uniform1f(u.aperture, expo.blur);
+  g.uniform2f(u.focus, state.focusUV.x, state.focusUV.y);
 }
 
 function render(){
@@ -477,10 +583,25 @@ function render(){
   const w = Math.floor(els.view.clientWidth*dpr), h = Math.floor(els.view.clientHeight*dpr);
   if(els.view.width!==w || els.view.height!==h){ els.view.width=w; els.view.height=h; }
   gl.viewport(0,0,w,h);
+  gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
+
+  const info = activeLut();
+  if(info.ready && info.img && lutUploadedImg !== info.img){
+    uploadLutTo(gl, lutTex, info.img); lutUploadedImg = info.img;
+  }
+
   const [sx,sy] = coverScale(w,h, video.videoWidth, video.videoHeight);
-  gl.uniform2f(uni.scale, sx, sy);
+  const z = hwZoom ? 1 : state.zoom;     // skip digital crop when hardware zoom is active
+  gl.uniform2f(uni.scale, sx/z, sy/z);
+  gl.uniform2f(uni.res, w, h);
+  gl.uniform1f(uni.aspect, w/h);
+  gl.uniform1i(uni.look, info.row);
+  gl.uniform1f(uni.lutN, info.N);
+  gl.uniform1f(uni.lutRows, info.rows);
+  gl.uniform1i(uni.hasLut, (info.ready && info.img) ? 1 : 0);
   setUniforms(gl, uni, exposure(), false);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -515,10 +636,16 @@ async function start(){
     if(!video){ video=document.createElement('video'); video.setAttribute('playsinline',''); video.muted=true; }
     video.srcObject = stream; await video.play();
     track = stream.getVideoTracks()[0] || null;
+    caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
+    hwZoom = false;
+    if(state.torch && caps.torch) applyTorch(true);
+    updateTorchBtn();
+    updateDevNote();
     if(!gl) initGL();
     els.overlay.style.display='none';
     cancelAnimationFrame(raf); render();
     refreshLenses();
+    if(caps.zoom) setZoom(state.zoom);  // re-apply zoom to new lens via hardware if available
   }catch(e){
     els.overlay.style.display='flex';
     els.ovText.hidden = false;
@@ -553,15 +680,60 @@ function updateLensBtn(){
           : (backLenses.length ? (backLenses[lensIndex]?.tag || '1×') : '1×');
   els.lensBtn.textContent = t;
   els.lensBtn.style.opacity = (state.facing==='environment' && backLenses.length>1) ? '1' : '0.5';
+  updateFL();
+}
+function baseMM(){
+  if(state.facing==='user') return 23;
+  const tag = backLenses.length ? (backLenses[lensIndex]?.tag || '1×') : '1×';
+  return FL_BASE[tag] || 26;
+}
+function updateFL(){
+  const mm = Math.round(baseMM() * state.zoom);
+  els.flLabel.textContent = '≈' + mm + 'mm';
+  els.flLabel.classList.add('on');
+  els.zmVal.textContent = state.zoom.toFixed(1) + '×';
+}
+function setZoom(z){
+  state.zoom = Math.min(Math.max(z, 1), ZOOM_MAX);
+  els.zoom.value = state.zoom;
+  updateFL();
+  // use real hardware zoom when the device supports it (sharper than digital)
+  if(caps && caps.zoom && track && track.applyConstraints){
+    const mn = caps.zoom.min, mx = caps.zoom.max;
+    const hw = mn + (mx - mn) * ((state.zoom - 1) / (ZOOM_MAX - 1));
+    track.applyConstraints({advanced:[{zoom:hw}]}).then(()=>{ hwZoom = true; }).catch(()=>{ hwZoom = false; });
+  }
+}
+
+/* ---- flash / torch ---- */
+function applyTorch(on){
+  if(!track || !track.applyConstraints) return;
+  track.applyConstraints({advanced:[{torch:on}]}).catch(()=>{});
+}
+function updateTorchBtn(){
+  const ok = !!(caps && caps.torch);
+  els.torchBtn.style.opacity = ok ? (state.torch ? '1' : '.7') : '.35';
+  els.torchBtn.classList.toggle('on', ok && state.torch);
+}
+function updateDevNote(){
+  const real = [];
+  if(caps && caps.zoom)  real.push('zoom');
+  if(caps && caps.torch) real.push('flash');
+  real.push('tap focus');
+  els.devNote.textContent =
+    'Shutter, ISO and aperture are simulated (iPhone fixes its lens, so apps can\'t drive the real sensor). '
+    + 'Aperture controls depth-of-field blur around your focus point plus vignetting; ISO adds grain. '
+    + 'Real hardware controls on this device: ' + real.join(', ') + '.';
 }
 
 /* ---- tap to set focus / exposure point ---- */
 function tapFocus(clientX, clientY){
   const r = els.view.getBoundingClientRect();
   const x = clientX - r.left, y = clientY - r.top;
-  // show reticle
+  // show reticle + move the simulated depth-of-field focus point here
   els.reticle.style.left = x+'px'; els.reticle.style.top = y+'px';
   els.reticle.classList.remove('go'); void els.reticle.offsetWidth; els.reticle.classList.add('go');
+  state.focusUV = { x: Math.min(Math.max(x/r.width,0),1), y: Math.min(Math.max(y/r.height,0),1) };
   // best-effort hardware focus/exposure (works on some devices; iOS Safari often ignores it)
   if(track && track.applyConstraints){
     const nx = Math.min(Math.max(x / r.width, 0), 1), ny = Math.min(Math.max(y / r.height, 0), 1);
@@ -601,10 +773,24 @@ function doCapture(){
   const off=document.createElement('canvas'); off.width=vw; off.height=vh;
   const g=off.getContext('webgl', {preserveDrawingBuffer:true});
   const b=buildProgram(g);
+  g.activeTexture(g.TEXTURE0);
   g.bindTexture(g.TEXTURE_2D, b.tex);
+  g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, true);
   g.texImage2D(g.TEXTURE_2D,0,g.RGB,g.RGB,g.UNSIGNED_BYTE,video);
+
+  const info = activeLut();
+  const clut = g.createTexture();
+  if(info.ready && info.img) uploadLutTo(g, clut, info.img);
+
   g.viewport(0,0,vw,vh);
-  g.uniform2f(b.uni.scale,1,1);
+  const cz = hwZoom ? 1 : state.zoom;
+  g.uniform2f(b.uni.scale, 1/cz, 1/cz);   // match preview zoom in the saved photo
+  g.uniform2f(b.uni.res, vw, vh);
+  g.uniform1f(b.uni.aspect, vw/vh);
+  g.uniform1i(b.uni.look, info.row);
+  g.uniform1f(b.uni.lutN, info.N);
+  g.uniform1f(b.uni.lutRows, info.rows);
+  g.uniform1i(b.uni.hasLut, (info.ready && info.img) ? 1 : 0);
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
   off.toBlob(bl=>{ if(bl) presentShot(bl); }, 'image/jpeg', 0.95);
@@ -637,6 +823,7 @@ function syncVals(){
   els.rF.textContent=f; els.rSs.textContent=fmtShutter(t); els.rIso.textContent=iso;
   els.wbVal.textContent=(state.wb>0?'+':'')+state.wb;
   els.intVal.textContent=Math.round(state.intensity*100)+'%';
+  els.blurVal.textContent=Math.round(state.blurGain*100)+'%';
   const ev=exposure().ev;
   els.evReadout.textContent=(ev>=0?'+':'')+ev.toFixed(1)+' EV';
 }
@@ -649,12 +836,36 @@ els.adjBtn.addEventListener('click', ()=>els.panel.classList.toggle('open'));
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>els.panel.classList.add('open')));
 els.flipBtn.addEventListener('click', ()=>{ state.facing = state.facing==='environment'?'user':'environment'; updateLensBtn(); start(); });
 els.lensBtn.addEventListener('click', ()=>{
-  if(state.facing!=='environment'){ state.facing='environment'; updateLensBtn(); start(); return; }
+  if(state.facing!=='environment'){ state.facing='environment'; setZoom(1); updateLensBtn(); start(); return; }
   if(backLenses.length<=1){ toast('Only one lens available'); return; }
   lensIndex = (lensIndex+1) % backLenses.length;
-  updateLensBtn(); toast('LENS '+backLenses[lensIndex].tag);
+  setZoom(1); updateLensBtn(); toast('LENS '+backLenses[lensIndex].tag);
   start();
 });
+els.zoom.addEventListener('input', e=>setZoom(+e.target.value));
+els.blur.addEventListener('input', e=>{ state.blurGain=(+e.target.value)/100; els.blurVal.textContent=Math.round(state.blurGain*100)+'%'; });
+// fade the panel while dragging any slider so the live effect is visible
+function peekPanel(){ els.panel.classList.add('peek'); clearTimeout(peekPanel._t);
+  peekPanel._t=setTimeout(()=>els.panel.classList.remove('peek'), 700); }
+els.panel.addEventListener('input', e=>{ if(e.target.type==='range') peekPanel(); });
+els.torchBtn.addEventListener('click', ()=>{
+  if(!caps || !caps.torch){ toast('No flash on this lens'); return; }
+  state.torch = !state.torch; applyTorch(state.torch); updateTorchBtn();
+});
+
+/* pinch-to-zoom on the viewfinder */
+let pinchStart=0, pinchZoom=1;
+function dist(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.hypot(dx,dy); }
+els.view.addEventListener('touchstart', e=>{
+  if(e.touches.length===2){ pinchStart=dist(e.touches); pinchZoom=state.zoom; }
+}, {passive:false});
+els.view.addEventListener('touchmove', e=>{
+  if(e.touches.length===2 && pinchStart>0){
+    e.preventDefault();
+    setZoom(pinchZoom * (dist(e.touches)/pinchStart));
+  }
+}, {passive:false});
+els.view.addEventListener('touchend', e=>{ if(e.touches.length<2) pinchStart=0; });
 els.gridBtn.addEventListener('click', ()=>{
   state.grid = !state.grid;
   els.grid.classList.toggle('on', state.grid);
@@ -673,8 +884,21 @@ els.iso.addEventListener('input', e=>{ state.iso=+e.target.value; syncVals(); })
 els.wb.addEventListener('input', e=>{ state.wb=+e.target.value; syncVals(); });
 els.int.addEventListener('input', e=>{ state.intensity=(+e.target.value)/100; syncVals(); });
 els.resetBtn.addEventListener('click', ()=>{
-  state.aper=4; state.shut=7; state.iso=0; state.wb=0;
-  els.aper.value=4; els.shut.value=7; els.iso.value=0; els.wb.value=0; syncVals();
+  state.aper=4; state.shut=7; state.iso=0; state.wb=0; state.blurGain=1.0;
+  els.aper.value=4; els.shut.value=7; els.iso.value=0; els.wb.value=0; els.blur.value=100; syncVals();
+});
+els.lutLoadBtn.addEventListener('click', ()=>els.lutFile.click());
+els.lutFile.addEventListener('change', async e=>{
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  try{
+    const txt = await f.text();
+    const { canvas, N } = parseCube(txt);
+    const name = f.name.replace(/\.cube$/i,'').toUpperCase();
+    LOOKS.push({ name:name.slice(0,10), tag:name.slice(0,3), custom:true, canvas, N, id:0 });
+    lookIndex = LOOKS.length - 1; lutUploadedImg = null;
+    syncLook(); toast('LUT: ' + name.slice(0,12));
+  }catch(err){ toast('Could not read that .cube'); }
+  e.target.value = '';
 });
 els.saveBtn.addEventListener('click', saveShot);
 els.backBtn.addEventListener('click', ()=>{ els.sheet.classList.remove('open');
