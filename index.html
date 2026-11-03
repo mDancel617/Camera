@@ -42,7 +42,7 @@
     font-family:var(--mono); font-size:11px; letter-spacing:1px}
   .top .mode{color:var(--accent); font-weight:700; min-width:30px}
   .top button{all:unset; cursor:pointer; color:var(--fg); font-family:var(--mono); font-size:11px; letter-spacing:1px}
-  .top .tbtns{display:flex; gap:14px}
+  .top .tbtns{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; row-gap:7px}
   .top .tbtns button.on{color:var(--accent)}
   .top .look{color:var(--fg); font-weight:700; text-align:right; min-width:58px}
 
@@ -128,10 +128,26 @@
   .rec.on{display:flex}
   .rec .dot{width:9px; height:9px; border-radius:50%; background:#e3433a; animation:blink 1s steps(2,start) infinite}
   @keyframes blink{50%{opacity:.2}}
+  @media (prefers-reduced-motion: reduce){ .rec .dot{animation:none} }
   .shutter.vid{border-color:#e3433a}
   .shutter.vid .core{background:#e3433a}
   .shutter.recording .core{border-radius:8px; width:28px; height:28px}
   .sheet video{flex:1; width:100%; min-height:0; background:#000}
+
+  /* AE/AF locked badge */
+  .lockbadge{position:absolute; top:calc(env(safe-area-inset-top) + 46px);
+    right:max(18px,env(safe-area-inset-right)); display:none;
+    font-family:var(--mono); font-size:10px; letter-spacing:1.5px; color:var(--accent);
+    background:rgba(0,0,0,.5); padding:5px 10px; border-radius:14px}
+  .lockbadge.on{display:block}
+
+  /* level / horizon */
+  .level{position:absolute; inset:0; display:none; align-items:center; justify-content:center; pointer-events:none}
+  .level.on{display:flex}
+  .lvline{width:62%; max-width:320px; height:2px; background:rgba(255,255,255,.85);
+    transform-origin:center center; box-shadow:0 0 4px rgba(0,0,0,.5); transition:background .15s}
+  .lvref{position:absolute; width:52px; height:2px; background:rgba(255,255,255,.45)}
+  .level.ok .lvline{background:#36d07a}
 
   .toast{position:absolute; left:50%; bottom:190px; transform:translateX(-50%); background:rgba(0,0,0,.62);
     color:#fff; font-family:var(--mono); font-size:12px; letter-spacing:2px; padding:8px 14px; border-radius:20px;
@@ -211,6 +227,8 @@
   <div class="count" id="count"></div>
   <div class="fl" id="flLabel">≈26mm</div>
   <div class="rec" id="recTag"><span class="dot"></span><span id="recTime">0:00</span></div>
+  <div class="lockbadge" id="lockBadge">AE/AF LOCKED</div>
+  <div class="level" id="level"><div class="lvref"></div><div class="lvline" id="lvline"></div></div>
 
   <div class="top">
     <div class="mode" id="modeTag">PRO</div>
@@ -221,6 +239,8 @@
       <button id="torchBtn">FLASH</button>
       <button id="gridBtn">GRID</button>
       <button id="timerBtn">T:OFF</button>
+      <button id="lockBtn">AE-L</button>
+      <button id="levelBtn">LEVEL</button>
     </div>
     <div class="look" id="lookTag">CLASSIC</div>
   </div>
@@ -243,6 +263,14 @@
         <select id="resSel" class="camsel">
           <option value="hd">HD · 1080p</option>
           <option value="4k">4K · 2160p</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="lbl"><span>VIDEO QUALITY</span></div>
+        <select id="brSel" class="camsel">
+          <option value="standard">Standard</option>
+          <option value="high" selected>High</option>
+          <option value="max">Max</option>
         </select>
       </div>
       <div class="row">
@@ -354,7 +382,9 @@ const state = {
   blurGain:1.0,            // user tuning of depth-of-field strength
   deviceId:null,           // explicit camera chosen from the picker (any webcam)
   mode:'photo',            // 'photo' | 'video'
-  recRes:'hd'              // 'hd' (1080p) | '4k' (2160p)
+  recRes:'hd',             // 'hd' (1080p) | '4k' (2160p)
+  bitrate:'high',          // 'standard' | 'high' | 'max'
+  lock:false               // AE/AF lock
 };
 const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
 const ZOOM_MAX = 6;
@@ -378,15 +408,17 @@ const els = {
   lutLoadBtn:el('lutLoadBtn'), lutFile:el('lutFile'), camSel:el('camSel'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
   recTag:el('recTag'), recTime:el('recTime'), shotVid:el('shotVid'),
+  lockBtn:el('lockBtn'), brSel:el('brSel'),
+  levelBtn:el('levelBtn'), level:el('level'), lvline:el('lvline'), lockBadge:el('lockBadge'),
 };
 let recording=false, recSize=null, mediaRecorder=null, recChunks=[], audioStream=null, recTimer=null, recStartMs=0;
 
-let video, stream, track, gl, program, tex, uni, raf;
+let video, stream, track, gl, tex, uni, raf;
 let backLenses = [], lensIndex = 0;   // physical lenses (ultra-wide / wide / tele)
 let caps = {}, hwZoom = false;        // live hardware capabilities
 let lutImage = null, lutReady = false, lutTex = null, lutUploadedImg = null;
 
-// load the baked film-LUT atlas (8 looks)
+// load the baked film-LUT atlas (12 built-in looks)
 (function loadAtlas(){
   const im = new Image();
   im.onload = ()=>{ lutImage = im; lutReady = true; lutUploadedImg = null; };
@@ -453,7 +485,7 @@ uniform int uLook;
 uniform float uExpose, uWB, uIntensity, uGrain, uVignette, uSeed;
 uniform float uAperture, uAspect;
 uniform vec2 uFocus, uRes;
-uniform bool uFlip, uHasLut;
+uniform bool uFlip, uHasLut, uFastBlur;
 uniform sampler2D uLut;         // film LUT atlas (NEAREST)
 uniform float uLutN, uLutRows;  // LUT size and number of look-rows in the atlas
 
@@ -496,13 +528,21 @@ void main(){
   vec3 c;
   if(blur > 0.002){
     vec3 acc = vec3(0.0);
-    for(int i=0;i<16;i++){
-      float a = float(i) * 2.39996;               // golden-angle spiral
-      float r = sqrt((float(i)+0.5)/16.0);
-      vec2 off = vec2(cos(a), sin(a)) * r * blur * 0.030;
-      acc += texture2D(tex, st + off).rgb;
+    if(uFastBlur){                                 // lighter 6-tap kernel (4K recording)
+      for(int i=0;i<6;i++){
+        float a = float(i) * 2.39996;
+        float r = sqrt((float(i)+0.5)/6.0);
+        acc += texture2D(tex, st + vec2(cos(a),sin(a)) * r * blur * 0.030).rgb;
+      }
+      c = acc / 6.0;
+    } else {                                       // full 16-tap kernel (preview, photos, HD)
+      for(int i=0;i<16;i++){
+        float a = float(i) * 2.39996;              // golden-angle spiral
+        float r = sqrt((float(i)+0.5)/16.0);
+        acc += texture2D(tex, st + vec2(cos(a),sin(a)) * r * blur * 0.030).rgb;
+      }
+      c = acc / 16.0;
     }
-    c = acc / 16.0;
   } else {
     c = texture2D(tex, st).rgb;
   }
@@ -562,7 +602,7 @@ function buildProgram(g){
     intensity:u('uIntensity'), grain:u('uGrain'), vignette:u('uVignette'),
     seed:u('uSeed'), flip:u('uFlip'),
     aperture:u('uAperture'), aspect:u('uAspect'), focus:u('uFocus'), res:u('uRes'),
-    lutN:u('uLutN'), lutRows:u('uLutRows'), hasLut:u('uHasLut')
+    lutN:u('uLutN'), lutRows:u('uLutRows'), hasLut:u('uHasLut'), fastBlur:u('uFastBlur')
   }};
 }
 
@@ -570,7 +610,7 @@ function initGL(){
   gl = els.view.getContext('webgl', {preserveDrawingBuffer:true, antialias:false});
   if(!gl) throw new Error('WebGL unavailable');
   const b = buildProgram(gl);
-  program=b.program; tex=b.tex; uni=b.uni;
+  tex=b.tex; uni=b.uni;
   lutTex = gl.createTexture();
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, lutTex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -610,6 +650,7 @@ function setUniforms(g, u, expo, forCapture){
   g.uniform1i(u.flip, state.facing==='user' ? 1 : 0);
   g.uniform1f(u.aperture, expo.blur);
   g.uniform2f(u.focus, state.focusUV.x, state.focusUV.y);
+  g.uniform1i(u.fastBlur, (recording && state.recRes==='4k') ? 1 : 0);  // lighter blur only while recording 4K
 }
 
 function render(){
@@ -677,7 +718,8 @@ async function start(){
     caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
     hwZoom = false;
     if(state.torch && caps.torch) applyTorch(true);
-    updateTorchBtn();
+    applyLock(state.lock);
+    updateTorchBtn(); updateLockBtn();
     updateDevNote();
     if(!gl) initGL();
     els.overlay.style.display='none';
@@ -719,7 +761,6 @@ async function refreshCameras(){
   try{
     const devs = await navigator.mediaDevices.enumerateDevices();
     const cams = devs.filter(d=>d.kind==='videoinput');
-    const cur = (track && track.getSettings) ? (track.getSettings().deviceId||'') : '';
     const sel = els.camSel;
     sel.innerHTML = '<option value="">Auto (rear)</option>';
     cams.forEach((d,i)=>{
@@ -728,8 +769,7 @@ async function refreshCameras(){
       o.textContent = d.label || ('Camera ' + (i+1));
       sel.appendChild(o);
     });
-    sel.value = state.deviceId || (state.deviceId===null && !state.facing ? '' : (state.deviceId || cur || ''));
-    if(state.deviceId) sel.value = state.deviceId; else sel.value = '';
+    sel.value = state.deviceId || '';   // show the explicit pick, else "Auto (rear)"
   }catch(e){}
 }
 
@@ -852,7 +892,10 @@ function doCapture(){
   g.uniform1i(b.uni.hasLut, (info.ready && info.img) ? 1 : 0);
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
-  off.toBlob(bl=>{ if(bl) presentShot(bl); }, 'image/jpeg', 0.95);
+  off.toBlob(bl=>{
+    if(bl) presentShot(bl);
+    const lose = g.getExtension('WEBGL_lose_context'); if(lose) lose.loseContext(); // free the one-shot context
+  }, 'image/jpeg', 0.95);
 }
 let lastName='photo.jpg', lastType='image/jpeg';
 function presentShot(blob){
@@ -900,6 +943,43 @@ function pickMime(){
   return '';
 }
 function fmtTime(ms){ const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function bitrateFor(){
+  const t = state.recRes==='4k' ? {standard:45e6, high:80e6, max:120e6} : {standard:16e6, high:28e6, max:50e6};
+  return t[state.bitrate] || t.high;
+}
+/* AE / AF lock — best effort (held where the device allows it) */
+function applyLock(on){
+  if(!track || !track.applyConstraints) return;
+  const adv = on ? [{exposureMode:'manual'},{focusMode:'manual'}]
+                 : [{exposureMode:'continuous'},{focusMode:'continuous'}];
+  track.applyConstraints({advanced:adv}).catch(()=>{});
+}
+function updateLockBtn(){
+  els.lockBtn.classList.toggle('on', state.lock);
+  els.lockBtn.style.opacity = state.lock?'1':'.7';
+  els.lockBadge.classList.toggle('on', state.lock);
+}
+
+/* level / horizon from the device tilt sensor */
+let levelOn=false;
+function onOrient(e){
+  const portrait = window.innerHeight >= window.innerWidth;
+  let roll = portrait ? (e.gamma||0) : ((window.orientation===-90) ? -(e.beta||0) : (e.beta||0));
+  roll = Math.max(-45, Math.min(45, roll));
+  els.lvline.style.transform = 'rotate(' + (-roll) + 'deg)';
+  els.level.classList.toggle('ok', Math.abs(roll) < 1.5);
+}
+async function enableLevel(){
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission){
+      const p = await DeviceOrientationEvent.requestPermission();
+      if(p!=='granted'){ toast('Motion access denied'); return false; }
+    }
+  }catch(e){ toast('Level needs motion access'); return false; }
+  window.addEventListener('deviceorientation', onOrient);
+  levelOn=true; return true;
+}
+function disableLevel(){ window.removeEventListener('deviceorientation', onOrient); levelOn=false; }
 
 async function startRec(){
   if(recording) return;
@@ -919,7 +999,7 @@ async function startRec(){
   }catch(e){ audioStream=null; }
   const mime = pickMime();
   try{
-    mediaRecorder = new MediaRecorder(cstream, mime ? {mimeType:mime, videoBitsPerSecond: state.recRes==='4k'?45000000:16000000} : undefined);
+    mediaRecorder = new MediaRecorder(cstream, mime ? {mimeType:mime, videoBitsPerSecond: bitrateFor()} : undefined);
   }catch(e){ recording=false; toast('Recorder error'); return; }
   recChunks = [];
   mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) recChunks.push(e.data); };
@@ -978,7 +1058,20 @@ els.modeBtn.addEventListener('click', ()=>{
   els.shutterBtn.classList.toggle('vid', state.mode==='video');
 });
 els.resSel.addEventListener('change', e=>{ state.recRes = e.target.value; });
+els.brSel.addEventListener('change', e=>{ state.bitrate = e.target.value; });
 els.rescanBtn.addEventListener('click', refreshCameras);
+els.lockBtn.addEventListener('click', ()=>{
+  state.lock = !state.lock; applyLock(state.lock); updateLockBtn();
+  toast(state.lock ? 'AE/AF locked' : 'AE/AF auto');
+});
+els.levelBtn.addEventListener('click', async ()=>{
+  if(!levelOn){
+    const ok = await enableLevel(); if(!ok) return;
+    els.level.classList.add('on'); els.levelBtn.classList.add('on');
+  } else {
+    disableLevel(); els.level.classList.remove('on'); els.levelBtn.classList.remove('on');
+  }
+});
 els.lookBtn.addEventListener('click', cycleLook);
 els.lookCell.addEventListener('click', cycleLook);
 els.adjBtn.addEventListener('click', ()=>{ const open=els.panel.classList.toggle('open'); if(open) refreshCameras(); });
@@ -1024,7 +1117,8 @@ els.view.addEventListener('touchmove', e=>{
     setZoom(pinchZoom * (dist(e.touches)/pinchStart));
   }
 }, {passive:false});
-els.view.addEventListener('touchend', e=>{ if(e.touches.length<2) pinchStart=0; });
+let lastPinchEnd=0;
+els.view.addEventListener('touchend', e=>{ if(e.touches.length<2){ if(pinchStart) lastPinchEnd=Date.now(); pinchStart=0; } });
 els.gridBtn.addEventListener('click', ()=>{
   state.grid = !state.grid;
   els.grid.classList.toggle('on', state.grid);
@@ -1036,7 +1130,7 @@ els.timerBtn.addEventListener('click', ()=>{
   els.timerBtn.textContent = state.timer ? ('T:'+state.timer+'s') : 'T:OFF';
   els.timerBtn.classList.toggle('on', state.timer>0);
 });
-els.view.addEventListener('click', e=>{ tapFocus(e.clientX, e.clientY); });
+els.view.addEventListener('click', e=>{ if(Date.now()-lastPinchEnd < 350) return; tapFocus(e.clientX, e.clientY); });
 els.aper.addEventListener('input', e=>{ state.aper=+e.target.value; syncVals(); });
 els.shut.addEventListener('input', e=>{ state.shut=+e.target.value; syncVals(); });
 els.iso.addEventListener('input', e=>{ state.iso=+e.target.value; syncVals(); });
