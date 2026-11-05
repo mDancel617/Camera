@@ -241,6 +241,7 @@
       <button id="timerBtn">T:OFF</button>
       <button id="lockBtn">AE-L</button>
       <button id="levelBtn">LEVEL</button>
+      <button id="peakBtn">PEAK</button>
     </div>
     <div class="look" id="lookTag">CLASSIC</div>
   </div>
@@ -299,8 +300,32 @@
         <input type="range" id="wb" min="-10" max="10" step="1" value="0">
       </div>
       <div class="row">
+        <div class="lbl"><span>CONTRAST</span><b id="conVal">0</b></div>
+        <input type="range" id="con" min="-50" max="50" step="5" value="0">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>SATURATION</span><b id="satVal">0</b></div>
+        <input type="range" id="sat" min="-100" max="100" step="5" value="0">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>SOFTEN</span><b id="softVal">0%</b></div>
+        <input type="range" id="soft" min="0" max="100" step="5" value="0">
+      </div>
+      <div class="row">
         <div class="lbl"><span>LOOK STRENGTH</span><b id="intVal">100%</b></div>
         <input type="range" id="int" min="0" max="100" step="5" value="100">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>PHOTO FORMAT</span><b id="qualVal">95%</b></div>
+        <select id="fmtSel" class="camsel">
+          <option value="jpeg">JPEG (adjustable quality)</option>
+          <option value="png">PNG (lossless, large)</option>
+        </select>
+        <input type="range" id="qual" min="60" max="100" step="5" value="95">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>SAVING</span><b id="autoVal">Ask each time</b></div>
+        <button id="autoBtn" class="loadlut">Auto-save to a folder…</button>
       </div>
       <button id="lutLoadBtn" class="loadlut">＋ Load .cube film LUT</button>
       <input type="file" id="lutFile" accept=".cube,.CUBE" hidden>
@@ -385,7 +410,12 @@ const state = {
   mode:'photo',            // 'photo' | 'video'
   recRes:'hd',             // 'hd' (1080p) | '4k' (2160p)
   bitrate:'high',          // 'standard' | 'high' | 'max'
-  lock:false               // AE/AF lock
+  lock:false,              // AE/AF lock
+  autoSave:false,          // silent save to a chosen folder (where supported)
+  contrast:1.0, saturation:1.0, soften:0.0,  // color tools + de-sharpen
+  peaking:false,           // focus peaking overlay (preview only)
+  imgFormat:'jpeg',        // 'jpeg' | 'png'
+  quality:0.95             // JPEG quality
 };
 const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
 const ZOOM_MAX = 6;
@@ -407,6 +437,9 @@ const els = {
   zoom:el('zoom'), zmVal:el('zmVal'), torchBtn:el('torchBtn'), devNote:el('devNote'),
   blur:el('blur'), blurVal:el('blurVal'),
   lutLoadBtn:el('lutLoadBtn'), lutFile:el('lutFile'), camSel:el('camSel'),
+  autoBtn:el('autoBtn'), autoVal:el('autoVal'),
+  peakBtn:el('peakBtn'), con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
+  soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
   recTag:el('recTag'), recTime:el('recTime'), shotVid:el('shotVid'),
   lockBtn:el('lockBtn'), brSel:el('brSel'),
@@ -478,6 +511,7 @@ varying vec2 uv;
 uniform sampler2D tex;
 uniform int uLook;
 uniform float uExpose, uWB, uIntensity, uGrain, uVignette, uSeed;
+uniform float uContrast, uSaturation, uSoften, uPeaking;
 uniform float uAperture, uAspect;
 uniform vec2 uFocus, uRes;
 uniform bool uFlip, uUseLut, uFastBlur;
@@ -596,6 +630,13 @@ void main(){
     c = texture2D(tex, st).rgb;
   }
 
+  if(uSoften > 0.0){                 // de-sharpen: gentle softening for a natural look
+    vec2 so = vec2(0.0016);
+    vec3 bl = (texture2D(tex, st+vec2(so.x,0.0)).rgb + texture2D(tex, st-vec2(so.x,0.0)).rgb
+             + texture2D(tex, st+vec2(0.0,so.y)).rgb + texture2D(tex, st-vec2(0.0,so.y)).rgb) * 0.25;
+    c = mix(c, bl, uSoften);
+  }
+
   c *= uExpose;                      // exposure triangle result
   c.r *= (1.0 + uWB*0.012);          // warmth
   c.b *= (1.0 - uWB*0.012);
@@ -611,6 +652,11 @@ void main(){
   vec3 look = uUseLut ? lutSample(pre) : builtinLook(pre, uLook);
   c = mix(pre, look, uIntensity);   // look strength (does not touch exposure)
 
+  // color tools: contrast + saturation on top of the look
+  c = clamp((c - 0.5) * uContrast + 0.5, 0.0, 1.0);
+  float lpc = dot(c, vec3(0.2126,0.7152,0.0722));
+  c = clamp(mix(vec3(lpc), c, uSaturation), 0.0, 1.0);
+
   // aperture vignette
   vec2 d = uv - 0.5;
   c *= 1.0 - dot(d,d) * uVignette;
@@ -619,6 +665,15 @@ void main(){
   if(uGrain > 0.0){
     float n = hash(gl_FragCoord.xy + vec2(uSeed)) - 0.5;
     c += n * uGrain;
+  }
+
+  if(uPeaking > 0.0){                // focus peaking: tint sharp (in-focus) edges
+    vec2 pe = vec2(0.0018);
+    float l0=dot(texture2D(tex,st).rgb, vec3(0.299,0.587,0.114));
+    float lx=dot(texture2D(tex,st+vec2(pe.x,0.0)).rgb, vec3(0.299,0.587,0.114));
+    float ly=dot(texture2D(tex,st+vec2(0.0,pe.y)).rgb, vec3(0.299,0.587,0.114));
+    float edge=abs(l0-lx)+abs(l0-ly);
+    if(edge>0.055) c=mix(c, vec3(1.0,0.15,0.15), 0.85);
   }
 
   gl_FragColor = vec4(clamp(c,0.0,1.0), 1.0);
@@ -651,7 +706,8 @@ function buildProgram(g){
     intensity:u('uIntensity'), grain:u('uGrain'), vignette:u('uVignette'),
     seed:u('uSeed'), flip:u('uFlip'),
     aperture:u('uAperture'), aspect:u('uAspect'), focus:u('uFocus'), res:u('uRes'),
-    lutN:u('uLutN'), lutRows:u('uLutRows'), useLut:u('uUseLut'), fastBlur:u('uFastBlur')
+    lutN:u('uLutN'), lutRows:u('uLutRows'), useLut:u('uUseLut'), fastBlur:u('uFastBlur'),
+    contrast:u('uContrast'), saturation:u('uSaturation'), soften:u('uSoften'), peaking:u('uPeaking')
   }};
 }
 
@@ -700,6 +756,9 @@ function setUniforms(g, u, expo, forCapture){
   g.uniform1f(u.aperture, expo.blur);
   g.uniform2f(u.focus, state.focusUV.x, state.focusUV.y);
   g.uniform1i(u.fastBlur, (recording && state.recRes==='4k') ? 1 : 0);  // lighter blur only while recording 4K
+  g.uniform1f(u.contrast, state.contrast);
+  g.uniform1f(u.saturation, state.saturation);
+  g.uniform1f(u.soften, state.soften);
 }
 
 function render(){
@@ -729,6 +788,7 @@ function render(){
   gl.uniform1f(uni.lutN, info.N);
   gl.uniform1f(uni.lutRows, info.rows);
   gl.uniform1i(uni.useLut, info.custom ? 1 : 0);
+  gl.uniform1f(uni.peaking, state.peaking ? 1 : 0);   // focus peaking: preview only
   setUniforms(gl, uni, exposure(), false);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -983,31 +1043,57 @@ function doCapture(){
   g.uniform1f(b.uni.lutN, info.N);
   g.uniform1f(b.uni.lutRows, info.rows);
   g.uniform1i(b.uni.useLut, info.custom ? 1 : 0);
+  g.uniform1f(b.uni.peaking, 0);   // never bake peaking into the saved photo
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
+  const fmt = state.imgFormat==='png' ? 'image/png' : 'image/jpeg';
+  const ext = state.imgFormat==='png' ? 'png' : 'jpg';
   off.toBlob(bl=>{
-    if(bl) presentShot(bl);
+    if(bl) deliver(bl, `mcam_${Date.now()}.${ext}`, fmt, false);
     const lose = g.getExtension('WEBGL_lose_context'); if(lose) lose.loseContext(); // free the one-shot context
-  }, 'image/jpeg', 0.95);
+  }, fmt, state.quality);
 }
-let lastName='photo.jpg', lastType='image/jpeg';
-function presentShot(blob){
-  lastBlob=blob; lastName=`mcam_${Date.now()}.jpg`; lastType='image/jpeg';
+let lastName='photo.jpg', lastType='image/jpeg', dirHandle=null;
+
+// auto-save to a chosen folder (desktop Chrome/Edge, Android Chrome) — no per-file tap
+async function chooseSaveFolder(){
+  if(!window.showDirectoryPicker){ toast('Folder auto-save not supported here'); return; }
+  try{
+    dirHandle = await window.showDirectoryPicker({ mode:'readwrite', id:'mcam' });
+    state.autoSave = true; updateAutoBtn(); toast('Auto-saving to folder');
+  }catch(e){ /* cancelled */ }
+}
+async function writeToFolder(blob, name){
+  const fh = await dirHandle.getFileHandle(name, {create:true});
+  const w = await fh.createWritable(); await w.write(blob); await w.close();
+}
+// deliver a capture: silent auto-save if a folder is set, else the tap-to-save sheet
+async function deliver(blob, name, type, isVideo){
+  lastBlob=blob; lastName=name; lastType=type;
+  if(state.autoSave && dirHandle){
+    try{ await writeToFolder(blob, name); toast('Saved'); return; }
+    catch(e){ toast('Folder save failed — tap Save'); }
+  }
   if(lastURL) URL.revokeObjectURL(lastURL);
   lastURL=URL.createObjectURL(blob);
-  els.shotVid.hidden=true; els.shotVid.removeAttribute('src');
-  els.shot.hidden=false; els.shot.src=lastURL;
-  els.sheetHint.textContent='Tap Save to send it to Photos.';
+  if(isVideo){
+    els.shot.hidden=true; els.shot.removeAttribute('src');
+    els.shotVid.hidden=false; els.shotVid.src=lastURL; els.shotVid.load();
+    els.sheetHint.textContent='Tap Save to send it to your library.';
+  } else {
+    els.shotVid.hidden=true; els.shotVid.removeAttribute('src');
+    els.shot.hidden=false; els.shot.src=lastURL;
+    els.sheetHint.textContent='Tap Save to send it to Photos.';
+  }
   els.sheet.classList.add('open');
 }
-function presentVideo(blob, ext, type){
-  lastBlob=blob; lastName=`mcam_${Date.now()}.${ext}`; lastType=type;
-  if(lastURL) URL.revokeObjectURL(lastURL);
-  lastURL=URL.createObjectURL(blob);
-  els.shot.hidden=true; els.shot.removeAttribute('src');
-  els.shotVid.hidden=false; els.shotVid.src=lastURL; els.shotVid.load();
-  els.sheetHint.textContent='Tap Save to send it to your library.';
-  els.sheet.classList.add('open');
+function presentShot(blob){ deliver(blob, `mcam_${Date.now()}.jpg`, 'image/jpeg', false); }
+function presentVideo(blob, ext, type){ deliver(blob, `mcam_${Date.now()}.${ext}`, type, true); }
+function updateAutoBtn(){
+  const supported = !!window.showDirectoryPicker;
+  if(state.autoSave && dirHandle){ els.autoVal.textContent='Auto → folder'; els.autoBtn.textContent='Turn off auto-save'; }
+  else { els.autoVal.textContent = supported ? 'Ask each time' : 'Ask (folder save not supported here)';
+         els.autoBtn.textContent='Auto-save to a folder…'; }
 }
 async function saveShot(){
   if(!lastBlob) return;
@@ -1233,10 +1319,20 @@ els.aper.addEventListener('input', e=>{ state.aper=+e.target.value; syncVals(); 
 els.shut.addEventListener('input', e=>{ state.shut=+e.target.value; syncVals(); });
 els.iso.addEventListener('input', e=>{ state.iso=+e.target.value; syncVals(); });
 els.wb.addEventListener('input', e=>{ state.wb=+e.target.value; syncVals(); });
+els.con.addEventListener('input', e=>{ const v=+e.target.value; state.contrast=1+v/100; els.conVal.textContent=(v>0?'+':'')+v; });
+els.sat.addEventListener('input', e=>{ const v=+e.target.value; state.saturation=1+v/100; els.satVal.textContent=(v>0?'+':'')+v; });
+els.soft.addEventListener('input', e=>{ const v=+e.target.value; state.soften=v/100; els.softVal.textContent=v+'%'; });
+els.peakBtn.addEventListener('click', ()=>{ state.peaking=!state.peaking; els.peakBtn.classList.toggle('on', state.peaking); toast(state.peaking?'Focus peaking on':'Focus peaking off'); });
+els.fmtSel.addEventListener('change', e=>{ state.imgFormat=e.target.value; els.qual.disabled=(state.imgFormat==='png'); });
+els.qual.addEventListener('input', e=>{ state.quality=(+e.target.value)/100; els.qualVal.textContent=e.target.value+'%'; });
 els.int.addEventListener('input', e=>{ state.intensity=(+e.target.value)/100; syncVals(); });
 els.resetBtn.addEventListener('click', ()=>{
   state.aper=4; state.shut=7; state.iso=0; state.wb=0; state.blurGain=1.0;
-  els.aper.value=4; els.shut.value=7; els.iso.value=0; els.wb.value=0; els.blur.value=100; syncVals();
+  state.contrast=1.0; state.saturation=1.0; state.soften=0.0;
+  els.aper.value=4; els.shut.value=7; els.iso.value=0; els.wb.value=0; els.blur.value=100;
+  els.con.value=0; els.sat.value=0; els.soft.value=0;
+  els.conVal.textContent='0'; els.satVal.textContent='0'; els.softVal.textContent='0%';
+  syncVals();
 });
 els.lutLoadBtn.addEventListener('click', ()=>els.lutFile.click());
 els.lutFile.addEventListener('change', async e=>{
@@ -1251,11 +1347,15 @@ els.lutFile.addEventListener('change', async e=>{
   }catch(err){ toast('Could not read that .cube'); }
   e.target.value = '';
 });
+els.autoBtn.addEventListener('click', ()=>{
+  if(state.autoSave){ state.autoSave=false; dirHandle=null; updateAutoBtn(); toast('Auto-save off'); }
+  else chooseSaveFolder();
+});
 els.saveBtn.addEventListener('click', saveShot);
 els.backBtn.addEventListener('click', ()=>{ els.sheet.classList.remove('open');
   els.sheetHint.textContent='Tap Save to send it to Photos.'; });
 
-syncLook(); syncVals();
+syncLook(); syncVals(); updateAutoBtn();
 if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
   els.ovText.hidden=false;
   els.ovText.textContent='This browser can\'t open the camera. Use Safari on iPhone, opened over an https link.';
