@@ -313,6 +313,7 @@
 
   /* ============ ROUND RESULTS + LEADERBOARD ============ */
   .results{position:absolute; inset:0; z-index:8; display:none; flex-direction:column;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
     background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.2) 2px 3px), linear-gradient(180deg,#1a0b3a,#07071a);
     font-family:var(--pixel); color:#fff; padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 14px)}
   .results.open{display:flex}
@@ -320,13 +321,13 @@
   .results .stat{text-align:center; font-size:9px; color:#36e0ff; letter-spacing:1px; margin-bottom:2px}
   .results .big{text-align:center; font-size:30px; color:#ffe14d; text-shadow:3px 3px 0 #c0392b; margin:4px 0}
   .results .big .rk{color:#ff5df2; margin-left:10px}
-  .framegrid{flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0;
+  .framegrid{flex:none; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0;
     align-content:start}
   .framegrid .cellimg{position:relative; border:2px solid #36e0ff; background:#000}
   .framegrid .cellimg img{display:block; width:100%; aspect-ratio:1; object-fit:cover; image-rendering:auto}
   .framegrid .cellimg .s{position:absolute; left:0; right:0; bottom:0; font-size:8px; text-align:center;
     background:rgba(0,0,0,.65); color:#ffe14d; padding:2px 0}
-  .results .btns{display:flex; gap:10px}
+  .results .btns{display:flex; gap:10px; margin-top:auto; padding-top:18px; flex:none}
   .results .btns button{flex:1; all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:9px;
     padding:12px; color:#07071a; background:#36e0ff; box-shadow:4px 4px 0 #0a7d5a}
   .results .btns button.alt{background:#ffe14d; box-shadow:4px 4px 0 #b3820a}
@@ -354,17 +355,18 @@
     box-shadow:inset 0 2px 3px #ffd9d2, 0 0 0 3px #7a1a14 !important}
 
   /* ============ DIRECT CRITIQUE FLASH ============ */
-  .crit{position:absolute; left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%); z-index:5;
+  .crit{position:absolute; left:50%; top:calc(env(safe-area-inset-top) + 140px); bottom:auto; transform:translateX(-50%); z-index:5;
     width:min(360px,88vw); display:none; flex-direction:column; gap:3px; pointer-events:none;
     background:linear-gradient(180deg,#120a2e,#0a0a1e); border:3px solid #36e0ff;
     box-shadow:0 0 14px #36e0ff55, 6px 6px 0 rgba(0,0,0,.5); font-family:var(--pixel); color:#fff; padding:10px 12px}
-  .crit.on{display:flex}
+  .crit.on{display:flex; pointer-events:auto; cursor:pointer}
   .crit .hd{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px}
   .crit .t{font-size:18px; color:#ffe14d; text-shadow:2px 2px 0 #c0392b}
   .crit .r{font-size:15px; color:#ff5df2}
   .crit .ln{font-size:8px; line-height:1.55}
   .crit .ln.good{color:#5bff9d} .crit .ln.bad{color:#ff8a8a}
   .crit .tip{font-size:8px; color:#36e0ff; margin-top:4px; line-height:1.5}
+  .crit .dismiss{font-size:7px; color:#8f7dff; text-align:center; margin-top:6px; letter-spacing:1px}
 
   /* ===== organized retro top strip + bigger live score ===== */
   .top{ background:linear-gradient(180deg, rgba(8,7,26,.85), rgba(8,7,26,.25) 72%, transparent); }
@@ -392,7 +394,7 @@
     width:120px; color:#ffe14d; background:#0a0a1e; border:2px solid #36e0ff; padding:8px 6px;
     letter-spacing:3px; outline:none; box-shadow:0 0 8px #36e0ff55}
   .nameinput::placeholder{color:#2a4a52}
-  .fw{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:9; display:none}
+  .fw{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:9; display:none}
   .fw.on{display:block}
   .himsg{display:none; text-align:center; font-family:var(--pixel); font-size:13px; line-height:1.7;
     color:#36ff8a; text-shadow:2px 2px 0 #0a7d3a, 0 0 12px #36ff8a88; margin:8px 4px 2px;
@@ -741,9 +743,8 @@ function showCrit(res){
     .concat(res.neg.map(p=>`<div class="ln bad">▼ ${p[0]} ${p[1]}</div>`)).join('');
   const tip = (res.tips && res.tips.length) ? `<div class="tip">▶ ${res.tips[0]}</div>` : '';
   els.crit.innerHTML = `<div class="hd"><span class="t">${res.total}</span><span class="r">RANK ${rank}</span></div>`
-    + lines + tip;
-  els.crit.classList.add('on');
-  clearTimeout(showCrit._t); showCrit._t = setTimeout(()=>els.crit.classList.remove('on'), 3600);
+    + lines + tip + `<div class="dismiss">TAP TO CLOSE ▸</div>`;
+  els.crit.classList.add('on');   // stays up until tapped
 }
 function endScoring(){
   state.scoreMode = false; els.scoreBtn.classList.remove('on');
@@ -2303,6 +2304,7 @@ els.mapBtn.addEventListener('click', ()=>{
   els.mapLabel.classList.toggle('on', mapOn);
   if(mapOn){ drawMiniMap(); toast(lastPos ? 'Map on' : 'Map on · waiting for GPS'); }
 });
+els.crit.addEventListener('click', ()=> els.crit.classList.remove('on'));
 els.boardBtn.addEventListener('click', openBoard);
 els.boardClose.addEventListener('click', async ()=>{
   commitRound(); stopFireworks();
