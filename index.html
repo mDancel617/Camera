@@ -327,6 +327,122 @@
   .achrow .tx .n{font-size:9px; color:#ffe14d} .achrow .tx .d{font-size:7px; color:#9aa; margin-top:3px; line-height:1.4}
   .achrow.locked{opacity:.45} .achrow.locked .ic{filter:grayscale(1)}
   .achrow.got{background:rgba(45,34,10,.4); border-color:#b3820a}
+
+  /* ===== credits ===== */
+  .credline{font-family:var(--pixel); font-size:8px; color:#ffb34d; letter-spacing:1px}
+
+  /* ===== CAMERA SHOP ===== */
+  .shop{position:absolute; inset:0; z-index:11; display:none; flex-direction:column; align-items:center;
+    overflow-y:auto; padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+    background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px), linear-gradient(180deg,#201436,#07071a);
+    font-family:var(--pixel); color:#fff}
+  .shop.on{display:flex}
+  .shop h2{font-size:15px; color:#ffe14d; text-shadow:3px 3px 0 #c0392b; margin:2px 0 4px; letter-spacing:1px}
+  .shopcred{font-size:9px; color:#ffb34d; margin-bottom:8px; letter-spacing:1px}
+  #shopScene{width:min(320px,92vw); height:150px; image-rendering:pixelated; border:3px solid #8f6a3a;
+    box-shadow:0 0 0 3px #07071a; background:#2a1c10; border-radius:2px}
+  .bubble{font-size:8px; line-height:1.6; color:#07071a; background:#cfe8ff; border:2px solid #36e0ff;
+    border-radius:8px; padding:9px 11px; margin:9px 0; max-width:320px; position:relative}
+  .bubble:before{content:''; position:absolute; top:-9px; left:40px; border:7px solid transparent; border-bottom-color:#36e0ff}
+  .assign{width:100%; max-width:340px; border:2px solid #5bff9d; border-radius:8px; padding:10px; margin-bottom:10px;
+    background:rgba(10,30,20,.5)}
+  .assign .at{font-size:9px; color:#5bff9d; letter-spacing:1px; margin-bottom:5px}
+  .assign .ad{font-size:8px; color:#cfe; line-height:1.6}
+  .assign .arew{font-size:8px; color:#ffb34d; margin:5px 0}
+  .assign button{all:unset; cursor:pointer; font-size:8px; color:#07071a; background:#5bff9d; padding:8px 12px;
+    border-radius:5px; box-shadow:3px 3px 0 #0a7d4a; margin-top:4px}
+  .assign .prog{font-size:8px; color:#36e0ff}
+  .shoptabs{display:flex; gap:8px; margin-bottom:8px}
+  .stab{all:unset; cursor:pointer; font-family:var(--pixel); font-size:9px; color:#9fb4e6;
+    background:linear-gradient(180deg,#1b2140,#11152b); border:1px solid #39407a; padding:8px 14px; border-radius:4px}
+  .stab.sel{color:#07071a; background:linear-gradient(180deg,#36e0ff,#17b3d6); border-color:#0a7d9a}
+  .shoplist{width:100%; max-width:340px; display:flex; flex-direction:column; gap:8px; margin-bottom:12px}
+  .shopitem{display:flex; align-items:center; gap:10px; border:1px solid #2a1c4a; border-radius:6px; padding:9px;
+    background:rgba(10,8,26,.5)}
+  .shopitem canvas{width:34px; height:34px; image-rendering:pixelated; flex:0 0 auto}
+  .shopitem .info{flex:1; min-width:0}
+  .shopitem .nm{font-size:9px; color:#ffe14d}
+  .shopitem .ds{font-size:7px; color:#9aa; margin-top:3px; line-height:1.4}
+  .shopitem .buy{all:unset; cursor:pointer; font-size:8px; color:#07071a; background:#ffe14d; padding:8px 10px;
+    border-radius:5px; box-shadow:3px 3px 0 #b3820a; text-align:center; white-space:nowrap}
+  .shopitem .buy.own{background:#5bff9d; box-shadow:3px 3px 0 #0a7d4a}
+  .shopitem .buy.eq{background:#36e0ff; box-shadow:3px 3px 0 #0a6a8a}
+  .shopitem .buy.cant{background:#4a4a52; color:#9aa; box-shadow:3px 3px 0 #222}
+  .shopitem.gold{border-color:#b3820a; background:rgba(45,34,10,.4)}
+  .shopbtns{display:flex; flex-direction:column; gap:9px; width:100%; max-width:340px}
+  .shopstart{all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:12px; color:#07071a;
+    background:#36e0ff; padding:15px; box-shadow:5px 5px 0 #0a7d5a; border-radius:3px}
+  .shopback{all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:9px; color:#9fb4e6;
+    border:1px solid #39407a; padding:11px; border-radius:3px}
+
+  /* ===== HOME / LOADOUT hub ===== */
+  .home{position:absolute; inset:0; z-index:11; display:none; flex-direction:column; align-items:center;
+    overflow-y:auto; padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 16px);
+    background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px), linear-gradient(180deg,#141036,#07071a);
+    font-family:var(--pixel); color:#fff}
+  .home.on{display:flex}
+  .home h2{font-size:15px; color:#ffe14d; text-shadow:3px 3px 0 #c0392b; margin:0 0 10px; letter-spacing:2px}
+  .homemid{display:flex; align-items:stretch; justify-content:center; gap:10px; width:100%; max-width:380px}
+  .hcol{flex:0 0 84px; display:flex; flex-direction:column; align-items:center; gap:6px}
+  .hlbl{font-size:7px; color:#36e0ff; letter-spacing:1px; text-align:center}
+  .hcenter{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px}
+  #homeChar{width:120px; height:145px; image-rendering:pixelated; filter:drop-shadow(3px 4px 0 rgba(0,0,0,.5))}
+  .hname{font-size:10px; color:#ffe14d; text-shadow:2px 2px 0 #c0392b}
+  .achstrip{display:flex; flex-wrap:wrap; gap:5px; justify-content:center; align-content:flex-start}
+  .achstrip .ai{width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:14px;
+    border:1px solid #2a1c4a; border-radius:5px; background:rgba(10,8,26,.5)}
+  .achstrip .ai.got{border-color:#b3820a; background:rgba(45,34,10,.5)} .achstrip .ai.locked{opacity:.35}
+  .camstrip{display:flex; flex-direction:column; gap:6px; width:100%}
+  .camstrip .ct{display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;
+    border:2px solid #39407a; border-radius:6px; padding:5px 3px; background:rgba(10,8,26,.5)}
+  .camstrip .ct.sel{border-color:#36e0ff; box-shadow:0 0 8px #36e0ff55; background:rgba(10,30,40,.5)}
+  .camstrip .ct canvas{width:30px; height:30px; image-rendering:pixelated}
+  .camstrip .ct .cn{font-size:6px; color:#cfe}
+  .camfeat{font-size:7px; color:#5bff9d; text-align:center; margin:9px 0 4px; line-height:1.6; max-width:360px; letter-spacing:.5px}
+  .bagwrap{width:100%; max-width:380px; margin-top:2px}
+  .bag{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:10px; margin-top:5px;
+    border:3px solid #6a4a2a; border-radius:10px 10px 4px 4px; background:linear-gradient(180deg,#3a2a18,#241508)}
+  .bag .fc{font-size:7px; color:#2a1c00; background:linear-gradient(180deg,#ffe9a3,#f2c14e 60%,#b3820a);
+    border:1px solid #8a6a1a; border-radius:3px; padding:7px 8px; cursor:pointer; letter-spacing:.5px}
+  .bag .fc.base{background:linear-gradient(180deg,#e8e8ec,#b2b8c1)}
+  .bag .fc.sel{box-shadow:0 0 0 2px #36e0ff, 0 0 8px #36e0ff88}
+  .bag .fc.empty{background:none; border:1px dashed #6a4a2a; color:#8a6a4a; cursor:default}
+  .homebtns{width:100%; max-width:380px; margin-top:12px; display:flex; flex-direction:column; gap:9px}
+  .homebtns2{display:flex; gap:10px; justify-content:center}
+
+  /* ===== new bottom bar: [map] [shutter] [CAMERA/FILM] ===== */
+  #mapBtn, #minimap, #mapLabel{ display:none !important }   /* map now lives in the bar */
+  .bar{ align-items:center !important; justify-content:space-between !important; padding:6px 14px 0 !important }
+  .sidebox{ display:flex; flex-direction:column; gap:7px; justify-content:center; width:114px }
+  .sidebox.left{ align-items:flex-start }
+  .sidebox.right{ align-items:stretch }
+  #barmap{ width:104px; height:104px; image-rendering:pixelated; border:3px solid #36e0ff;
+    box-shadow:0 0 0 3px #07071a, 0 0 10px #36e0ff55; background:#0a0a1e; border-radius:2px }
+  .rbtn{ all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:9px; color:#15181d;
+    background:linear-gradient(150deg,#f4f6f9 0%,#b2b8c1 46%,#6a6f78 100%); border:1.5px solid #cfd4da; border-radius:7px;
+    box-shadow:inset 0 2px 2px rgba(255,255,255,.85), inset 0 -3px 5px rgba(0,0,0,.4), 0 2px 5px rgba(0,0,0,.55);
+    padding:0 8px; display:flex; align-items:center; justify-content:center; letter-spacing:.5px }
+  .rbtn.big{ height:50px; font-size:10px }                 /* the "mother" rectangle */
+  .rbtn.film{ height:34px; color:#2a1c00;
+    background:linear-gradient(150deg,#ffe9a3 0%,#f2c14e 50%,#b3820a 100%) }
+  .rbtn:active{ transform:translateY(1px); box-shadow:inset 0 2px 4px rgba(0,0,0,.5) }
+  .rbtn.hidden{ display:none }
+
+  /* ===== landscape + left-hand shooter flip ===== */
+  @media (orientation:landscape) and (max-height:600px){
+    .bar{ flex-direction:column !important; gap:8px !important; padding:0 !important; align-items:center !important }
+    .sidebox{ width:auto; align-items:center; gap:6px }
+    #barmap{ width:56px; height:56px }
+    .rbtn.big{ height:34px; width:88px; font-size:9px } .rbtn.film{ height:26px; width:88px; font-size:8px }
+    /* LEFT-HAND: mirror the edges — controls to the left, chips to the right */
+    #stage.lh .top{ left:auto !important; right:0 !important; align-items:flex-end !important;
+      background:linear-gradient(270deg, rgba(0,0,0,.45), transparent) !important }
+    #stage.lh .top .tbtns{ align-items:flex-end }
+    #stage.lh .bottom{ right:auto !important; left:0 !important;
+      background:linear-gradient(90deg, rgba(0,0,0,.55), transparent) !important }
+    #stage.lh .panel{ left:auto !important; right:max(14px,env(safe-area-inset-right)) !important }
+    #stage.lh .hud{ left:auto !important; right:auto !important }
+  }
   .overlay .coin{font-family:var(--pixel); font-size:7px; letter-spacing:1px; color:#ff5df2; animation:blink2 1.2s steps(2,start) infinite}
   @keyframes blink2{50%{opacity:.25}}
 
@@ -616,13 +732,16 @@
       <div class="cell"><button data-panel><span class="k">SS</span><span class="v" id="rSs">1/125</span></button></div>
       <div class="cell"><button data-panel><span class="k">APER</span><span class="v" id="rF">5.6</span></button></div>
       <div class="cell"><button data-panel><span class="k">ISO</span><span class="v" id="rIso">100</span></button></div>
-      <div class="cell"><button id="lookCell"><span class="k">LOOK</span><span class="v" id="rLook">CLS</span></button></div>
+      <div class="cell" id="lookReadCell"><button id="lookCell"><span class="k">FILM</span><span class="v" id="rLook">STD</span></button></div>
     </div>
 
     <div class="bar">
-      <div class="round ghost" id="adjBtn">±</div>
+      <div class="sidebox left" id="barLeft"><canvas id="barmap" width="104" height="104"></canvas></div>
       <div class="shutter" id="shutterBtn"><div class="core"></div></div>
-      <div class="round solid" id="lookBtn">CLS</div>
+      <div class="sidebox right" id="barRight">
+        <button class="rbtn big" id="adjBtn">⚙ CAMERA</button>
+        <button class="rbtn film" id="lookBtn">FILM: STD</button>
+      </div>
     </div>
   </div>
 </div>
@@ -657,6 +776,8 @@
   <div class="btns">
     <button class="alt" id="resSaveAll">SAVE ALL</button>
     <button id="resAgain">NEW ROUND</button>
+    <button id="resHome">🏠 HOME</button>
+    <button id="resShop">🛒 SHOP</button>
     <button id="resBoard">BOARD</button>
   </div>
 </div>
@@ -684,14 +805,64 @@
       <button class="opt" data-diff="master">MASTER</button></div>
   </div>
   <div class="xpline" id="xpLine">RANK: ROOKIE · 0 XP</div>
+  <div class="credline" id="credLine">🪙 0 CREDITS</div>
   <div class="daily" id="dailyLine">◆ DAILY: …</div>
   <p id="ovText" hidden></p>
   <button id="startBtn">Let's Cook!</button>
   <div class="openbtns">
+    <button id="homeBtn" class="miniopen">🏠 HOME</button>
+    <button id="shopBtn" class="miniopen">🛒 SHOP</button>
     <button id="howBtn" class="miniopen">HOW TO PLAY</button>
     <button id="achBtn" class="miniopen">TROPHIES</button>
   </div>
   <div class="coin">★ THIRDS · GOLDEN RATIO · HI-SCORE ★</div>
+</div>
+
+<div class="shop" id="shop">
+  <h2>CAMERA SHOP</h2>
+  <div class="shopcred" id="shopCred">🪙 0 CREDITS</div>
+  <canvas id="shopScene" width="320" height="150"></canvas>
+  <div class="bubble" id="shopBubble">Welcome in! Buy a body, grab some film — or take an assignment for extra credits.</div>
+  <div class="assign" id="assignBox"></div>
+  <div class="shoptabs">
+    <button class="stab sel" data-tab="cam">CAMERAS</button>
+    <button class="stab" data-tab="film">FILM</button>
+  </div>
+  <div class="shoplist" id="shopList"></div>
+  <div class="shopbtns">
+    <button class="shopstart" id="shopStart">START SHOOTING ▸</button>
+    <button class="shopback" id="shopBack">BACK</button>
+  </div>
+</div>
+
+<div class="home" id="home">
+  <h2>LOADOUT</h2>
+  <div class="homemid">
+    <div class="hcol" id="homeAchCol">
+      <div class="hlbl">TROPHIES</div>
+      <div class="achstrip" id="homeAch"></div>
+    </div>
+    <div class="hcenter">
+      <canvas id="homeChar" width="48" height="58"></canvas>
+      <div class="hname" id="homeName">THE CLASSIC</div>
+    </div>
+    <div class="hcol" id="homeCamCol">
+      <div class="hlbl">CAMERA</div>
+      <div class="camstrip" id="homeCam"></div>
+    </div>
+  </div>
+  <div class="camfeat" id="homeFeat"></div>
+  <div class="bagwrap">
+    <div class="hlbl">CAMERA BAG · FILM</div>
+    <div class="bag" id="homeBag"></div>
+  </div>
+  <div class="homebtns">
+    <button class="shopstart" id="homeShoot">SHOOT ▸</button>
+    <div class="homebtns2">
+      <button class="miniopen" id="homeShop">🛒 SHOP</button>
+      <button class="miniopen" id="homeBack">BACK</button>
+    </div>
+  </div>
 </div>
 
 <div class="tut" id="tut">
@@ -796,7 +967,7 @@ let pendingRound = null, pendingSaved = true, fwRAF = 0;
 function startRound(){ roundShots = []; roundTotal = 0; geoPath = (lastPos?[{lat:lastPos.lat,lng:lastPos.lng}]:[]); shotMarks = []; placeName=''; geoRequested=false;
   if(lastPos) geocode(lastPos.lat,lastPos.lng);
   if(typeof pmStartRound==='function') pmStartRound();
-  updateHud(); els.hud.classList.add('on'); startMascot(); if(mapOn) drawMiniMap(); }
+  updateHud(); els.hud.classList.add('on'); startMascot(); drawBarMap(); }
 function updateHud(){
   els.hudScore.textContent = roundTotal;
   if(typeof gameMode!=='undefined' && gameMode==='time') els.hudShots.textContent = '⏱ ' + Math.max(0,pmTimeLeft) + 's';
@@ -825,6 +996,7 @@ function addRoundShot(blob){
   }
   const rk = rankFor(lastScore.total)[0];
   const add = (typeof pmOnShot==='function') ? pmOnShot(lastScore, rk) : lastScore.total;
+  if(typeof assignOnShot==='function') assignOnShot(lastScore, rk);
   roundShots.push({ thumb:lastThumb, total:lastScore.total, blob, level:lastScore.levelName, hash:h, cx, cy });
   roundTotal += add;
   updateHud(); flashPop(add); showCrit(lastScore);
@@ -869,10 +1041,13 @@ function finishRound(){
     blobs:roundShots.map(s=>s.blob) };   // blobs kept in memory for SAVE ALL (not stored)
   pendingSaved = false;
   els.resName.value = (localStorage.getItem('mcam_name')||'').toUpperCase();
-  els.resLoc.textContent = locLine();
+  const _ts = travelStats(geoPath);
+  els.resLoc.textContent = locLine() + '  ·  🚶 ' + _ts.meters + ' m / ' + _ts.steps + ' steps';
   drawMap(els.resMap, geoPath, shotMarks, lastPos);
   els.results.classList.add('open');
   if(typeof pmFinishRound==='function') pmFinishRound(total, rank);
+  if(typeof pmAwardCredits==='function') pmAwardCredits(total, rank);
+  if(typeof assignOnRound==='function') assignOnRound(total, rank, roundShots.length);
   const isHigh = (rank==='S' || rank==='A' || total>prevBest);
   els.hiMsg.classList.toggle('on', isHigh);     // "ALL YOUR SKILLS, ARE BELONG TO YOU."
   if(isHigh){ sfxFanfare(); launchFireworks(2800); }
@@ -984,42 +1159,88 @@ function onMotion(e){
   motionMag = Math.abs(m - 9.8) * 0.4 + motionMag * 0.6;
 }
 
-/* ---------- 8-bit GPS map (retro radar of where you walked + shot) ---------- */
+/* ---------- GPS map: satellite imagery + retro trail + distance tracker ---------- */
+const TILE=256;
+function lon2wx(lon,z){ return (lon+180)/360*TILE*Math.pow(2,z); }
+function lat2wy(lat,z){ const r=lat*Math.PI/180; return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*TILE*Math.pow(2,z); }
+function haversine(a,b){ const R=6371000, tr=x=>x*Math.PI/180;
+  const dLa=tr(b.lat-a.lat), dLo=tr(b.lng-a.lng);
+  const s=Math.sin(dLa/2)**2 + Math.cos(tr(a.lat))*Math.cos(tr(b.lat))*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s)); }
+function travelStats(path){ let m=0; for(let i=1;i<path.length;i++){ const d=haversine(path[i-1],path[i]); if(d<60) m+=d; } // ignore GPS jumps
+  return { meters:Math.round(m), steps:Math.round(m/0.762) }; }
+// satellite tile cache (Esri World Imagery — free, no key)
+var tileCache = {};
+function loadTile(z,x,y){
+  const key=z+'/'+x+'/'+y; let t=tileCache[key];
+  if(t) return t;
+  const img=new Image(); img.crossOrigin='anonymous'; img.ok=false; img.bad=false;
+  img.onload=()=>{ img.ok=true; mapRedraw(); };
+  img.onerror=()=>{ img.bad=true; };
+  img.src='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+z+'/'+y+'/'+x;
+  tileCache[key]=img; return img;
+}
+function mapRedraw(){
+  try{ if(els.barmap) drawMap(els.barmap, geoPath, shotMarks, lastPos); }catch(e){}
+  try{ if(els.results && els.results.classList.contains('open')) drawMap(els.resMap, geoPath, shotMarks, lastPos); }catch(e){}
+  try{ if(mapOn && els.minimap) drawMap(els.minimap, geoPath, shotMarks, lastPos); }catch(e){}
+}
 function drawMap(cv, path, marks, cur){
-  const W=cv.width, H=cv.height, g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
-  g.fillStyle='#0a0a1e'; g.fillRect(0,0,W,H);
-  // retro grid
-  g.strokeStyle='rgba(54,224,255,0.16)'; g.lineWidth=1;
-  const gs=Math.max(8, Math.round(W/8));
-  for(let x=0;x<=W;x+=gs){ g.beginPath(); g.moveTo(x+0.5,0); g.lineTo(x+0.5,H); g.stroke(); }
-  for(let y=0;y<=H;y+=gs){ g.beginPath(); g.moveTo(0,y+0.5); g.lineTo(W,y+0.5); g.stroke(); }
+  const W=cv.width, H=cv.height, g=cv.getContext('2d'); g.imageSmoothingEnabled=false; g.textAlign='left';
   const pts = path.concat(marks).concat(cur?[cur]:[]).filter(p=>p&&isFinite(p.lat));
-  if(!pts.length){
-    g.fillStyle='#36e0ff'; g.font='9px "Press Start 2P",monospace'; g.textAlign='center';
-    g.fillText('NO GPS', W/2, H/2); return;
+  // retro fallback background (also shows while tiles load / offline)
+  function retroBg(){
+    g.fillStyle='#0a0a1e'; g.fillRect(0,0,W,H);
+    g.strokeStyle='rgba(54,224,255,0.16)'; g.lineWidth=1; const gs=Math.max(8,Math.round(W/8));
+    for(let x=0;x<=W;x+=gs){ g.beginPath(); g.moveTo(x+0.5,0); g.lineTo(x+0.5,H); g.stroke(); }
+    for(let y=0;y<=H;y+=gs){ g.beginPath(); g.moveTo(0,y+0.5); g.lineTo(W,y+0.5); g.stroke(); }
   }
+  if(!pts.length){ retroBg(); g.fillStyle='#36e0ff'; g.font='9px "Press Start 2P",monospace'; g.textAlign='center'; g.fillText('NO GPS', W/2, H/2); return; }
   let minLa=1e9,maxLa=-1e9,minLo=1e9,maxLo=-1e9;
   pts.forEach(p=>{ minLa=Math.min(minLa,p.lat);maxLa=Math.max(maxLa,p.lat);minLo=Math.min(minLo,p.lng);maxLo=Math.max(maxLo,p.lng); });
   const cLa=(minLa+maxLa)/2, cLo=(minLo+maxLo)/2;
-  let spanLa=Math.max(maxLa-minLa,0.0006)*1.4, spanLo=Math.max(maxLo-minLo,0.0006)*1.4;
-  const toXY=p=>[ ((p.lng-(cLo-spanLo/2))/spanLo)*W, H-((p.lat-(cLa-spanLa/2))/spanLa)*H ];
+  // choose a zoom so the whole track fits, capped at Esri's max (19)
+  let z=19;
+  for(; z>15; z--){ const w=Math.abs(lon2wx(maxLo,z)-lon2wx(minLo,z)), h=Math.abs(lat2wy(maxLa,z)-lat2wy(minLa,z));
+    if(w<=W*0.82 && h<=H*0.82) break; }
+  const cwx=lon2wx(cLo,z), cwy=lat2wy(cLa,z);
+  const proj=p=>[ lon2wx(p.lng,z)-cwx + W/2, lat2wy(p.lat,z)-cwy + H/2 ];
+  // satellite tiles
+  retroBg();
+  let drewSat=false;
+  const x0=Math.floor((cwx-W/2)/TILE), x1=Math.floor((cwx+W/2)/TILE);
+  const y0=Math.floor((cwy-H/2)/TILE), y1=Math.floor((cwy+H/2)/TILE);
+  for(let tx=x0; tx<=x1; tx++) for(let ty=y0; ty<=y1; ty++){
+    const img=loadTile(z,tx,ty);
+    if(img && img.ok){ try{ g.drawImage(img, Math.round(tx*TILE-cwx+W/2), Math.round(ty*TILE-cwy+H/2), TILE, TILE); drewSat=true; }catch(e){} }
+  }
+  if(drewSat){ g.fillStyle='rgba(6,8,20,0.22)'; g.fillRect(0,0,W,H); }   // slight darken for legibility
   // walked trail
-  if(path.length>1){ g.strokeStyle='#5bff9d'; g.lineWidth=2; g.beginPath();
-    path.forEach((p,i)=>{ const [x,y]=toXY(p); i?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke(); }
-  // shot markers (yellow) + a trophy on the best-scoring spot
-  let best=-1, bestIdx=-1;
-  marks.forEach((p,i)=>{ if((p.score||0)>best){ best=p.score||0; bestIdx=i; } });
-  marks.forEach((p,i)=>{ const [x,y]=toXY(p);
+  if(path.length>1){ g.strokeStyle='#5bff9d'; g.lineWidth=2; g.shadowColor='#000'; g.shadowBlur=2; g.beginPath();
+    path.forEach((p,i)=>{ const [x,y]=proj(p); i?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke(); g.shadowBlur=0; }
+  // shot markers + trophy on the best-scoring spot
+  let best=-1,bestIdx=-1; marks.forEach((p,i)=>{ if((p.score||0)>best){ best=p.score||0; bestIdx=i; } });
+  marks.forEach((p,i)=>{ const [x,y]=proj(p);
     if(i===bestIdx && best>0){ g.fillStyle='#ffd24d'; g.fillRect((x|0)-3,(y|0)-3,7,7); g.fillStyle='#c0392b'; g.fillRect((x|0)-1,(y|0)-1,3,3); g.fillStyle='#fff'; g.fillRect((x|0),(y|0)-4,1,1); }
     else { g.fillStyle='#ffe14d'; g.fillRect((x|0)-2,(y|0)-2,5,5); g.fillStyle='#c0392b'; g.fillRect((x|0),(y|0),1,1); }
   });
   // current position = tiny 8-bit of the selected character
-  if(cur){ const ch=currentChar(); const [x,y]=toXY(cur); const X=x|0, Y=y|0;
-    g.fillStyle=ch.skin; g.fillRect(X-3,Y-2,6,5);       // face
-    g.fillStyle=ch.hair; g.fillRect(X-4,Y-5,8,3);       // hair / hat top
+  if(cur){ const ch=currentChar(); const [x,y]=proj(cur); const X=x|0, Y=y|0;
+    g.fillStyle=ch.skin; g.fillRect(X-3,Y-2,6,5);
+    g.fillStyle=ch.hair; g.fillRect(X-4,Y-5,8,3);
     if(ch.hairStyle==='hat'){ g.fillStyle='#0a0a0a'; g.fillRect(X-4,Y-4,8,2); }
     if(ch.shades){ g.fillStyle='#090909'; g.fillRect(X-3,Y-1,6,2); }
   }
+  // distance / step tracker (bottom-left)
+  const st=travelStats(path);
+  const small=W<140;
+  const label = small ? (st.meters+'m') : (st.meters+' M · '+st.steps+' steps');
+  g.font=(small?7:9)+'px "Press Start 2P",monospace'; g.textAlign='left';
+  const tw=g.measureText(label).width;
+  g.fillStyle='rgba(8,7,26,0.72)'; g.fillRect(2, H-(small?12:16), tw+8, (small?11:15));
+  g.fillStyle='#5bff9d'; g.fillText(label, 5, H-(small?3:4));
+  // Esri credit (satellite imagery attribution)
+  if(drewSat){ g.font='6px monospace'; g.textAlign='right'; g.fillStyle='rgba(255,255,255,0.7)'; g.fillText('Esri', W-3, 9); }
 }
 function drawMiniMap(){
   if(!els.minimap) return;
@@ -1028,6 +1249,8 @@ function drawMiniMap(){
   els.mapLabel.textContent = lvl.name + (placeName ? ('\n'+placeName.toUpperCase()) : '');
   els.mapLabel.style.whiteSpace='pre';
 }
+// small always-on map in the bottom-left of the camera bar
+function drawBarMap(){ if(els.barmap) drawMap(els.barmap, geoPath, shotMarks, lastPos); }
 // best-effort reverse geocode (OpenStreetMap) -> a place name for the level; falls back to coords
 async function geocode(lat,lng){
   if(geoRequested) return; geoRequested=true;
@@ -1156,16 +1379,17 @@ function computeScore(canvas){
 
   const pos=[], neg=[], tips=[];
   const DF = (typeof DIFF!=='undefined' && DIFF[difficulty]) ? DIFF[difficulty] : {sharp:SCORE.sharp, levelDeg:SCORE.levelDeg, mult:1};
-  // focus / sharp / blur
+  const CB = (typeof camPerk==='function') ? camPerk() : {sharp:0,color:0,dark:0,bright:0,mult:1};
+  // focus / sharp / blur  (Nikon lowers the Sharp bar)
   if(lapVar < SCORE.blur){ neg.push(['Blurry', -SCORE.down]); tips.push('Hold steady or tap the subject to focus'); }
   else { if(lapVar >= SCORE.focus) pos.push(['In focus', SCORE.up]);
-         if(lapVar >= DF.sharp) pos.push(['Sharp', SCORE.up]);
+         if(lapVar >= (DF.sharp - CB.sharp)) pos.push(['Sharp', SCORE.up]);
          else tips.push('Almost sharp — steady the shot to earn the Sharp bonus'); }
   // motion
   if(motionMag > SCORE.motion){ neg.push(['In motion', -SCORE.down]); tips.push('Camera moved — brace your arms, breathe out, then shoot'); }
-  // exposure
-  if(brightness < SCORE.dark){ neg.push(['Too dark', -SCORE.down]); tips.push('Underexposed — find more light or raise exposure (EV)'); }
-  else if(brightness > SCORE.bright){ neg.push(['Too bright', -SCORE.down]); tips.push('Overexposed — avoid the sky/sun or lower exposure (EV)'); }
+  // exposure  (Sony widens the acceptable range)
+  if(brightness < (SCORE.dark - CB.dark)){ neg.push(['Too dark', -SCORE.down]); tips.push('Underexposed — find more light or raise exposure (EV)'); }
+  else if(brightness > (SCORE.bright + CB.bright)){ neg.push(['Too bright', -SCORE.down]); tips.push('Overexposed — avoid the sky/sun or lower exposure (EV)'); }
   // rule of thirds — +200 for EACH intersection dot the subject touches (up to 4 = +800)
   if(dotsHit > 0){
     pos.push([ dotsHit>1 ? ('Thirds ×'+dotsHit+' dots') : 'Rule of thirds', SCORE.up*dotsHit ]);
@@ -1179,8 +1403,8 @@ function computeScore(canvas){
     if(Math.abs(levelRoll) < DF.levelDeg) pos.push(['Level', SCORE.levelUp]);
     else { neg.push(['Not level', -SCORE.levelDown]); tips.push('Straighten up — keep the horizon level for +100'); }
   }
-  // vivid-colour bonus — reward colourful, well-exposed frames (not flat grey)
-  if(colorful > 0.33 && brightness > 0.18 && brightness < 0.9) pos.push(['Vivid colour', 150]);
+  // vivid-colour bonus — reward colourful, well-exposed frames (Canon makes this easier)
+  if(colorful > (0.33 - CB.color) && brightness > 0.18 && brightness < 0.9) pos.push(['Vivid colour', 150]);
   // PERFECT — all four thirds dots AND the golden eye in one frame
   const perfect = (dotsHit >= 4 && goldenHit);
   if(perfect) pos.push(['PERFECT!', 300]);
@@ -1188,7 +1412,7 @@ function computeScore(canvas){
 
   let total = SCORE.start;
   pos.forEach(p=>total+=p[1]); neg.forEach(p=>total+=p[1]);
-  total = Math.max(0, Math.round(total * (DF.mult||1)));   // difficulty score multiplier
+  total = Math.max(0, Math.round(total * (DF.mult||1) * (CB.mult||1)));   // difficulty + camera (Leica) multiplier
   const lvl = levelForPosition(lastPos);
   const res = { total, pos, neg, tips, dotsHit, goldenHit, perfect, colorful, brightness, redness, lapVar,
                 hash:aHash(canvas), cx, cy, levelName:lvl.name, levelBest:lvl.best,
@@ -1271,6 +1495,14 @@ const els = {
   howBtn:el('howBtn'), achBtn:el('achBtn'), tut:el('tut'), tutClose:el('tutClose'),
   ach:el('ach'), achList:el('achList'), achXP:el('achXP'), achClose:el('achClose'),
   shareBtn:el('shareBtn'), resXP:el('resXP'), resObj:el('resObj'),
+  credLine:el('credLine'), shopBtn:el('shopBtn'), resShop:el('resShop'),
+  shop:el('shop'), shopCred:el('shopCred'), shopScene:el('shopScene'), shopBubble:el('shopBubble'),
+  assignBox:el('assignBox'), shopList:el('shopList'), shopStart:el('shopStart'), shopBack:el('shopBack'),
+  barLeft:el('barLeft'), barRight:el('barRight'), barmap:el('barmap'),
+  lookReadCell:el('lookReadCell'), stage:el('stage'),
+  homeBtn:el('homeBtn'), resHome:el('resHome'), home:el('home'), homeChar:el('homeChar'), homeName:el('homeName'),
+  homeAch:el('homeAch'), homeCam:el('homeCam'), homeFeat:el('homeFeat'), homeBag:el('homeBag'),
+  homeShoot:el('homeShoot'), homeShop:el('homeShop'), homeBack:el('homeBack'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
@@ -1579,8 +1811,9 @@ function exposure(){
 }
 
 function setUniforms(g, u, expo, forCapture){
+  const cg = (typeof camGrade==='function') ? camGrade() : {contrast:1, warmth:0};
   g.uniform1f(u.expose, expo.expose);
-  g.uniform1f(u.wb, state.wb);
+  g.uniform1f(u.wb, state.wb + (cg.warmth||0));
   g.uniform1f(u.intensity, state.intensity);
   g.uniform1f(u.grain, expo.grain);
   g.uniform1f(u.vignette, expo.vignette);
@@ -1589,7 +1822,7 @@ function setUniforms(g, u, expo, forCapture){
   g.uniform1f(u.aperture, expo.blur);
   g.uniform2f(u.focus, state.focusUV.x, state.focusUV.y);
   g.uniform1i(u.fastBlur, (recording && state.recRes==='4k') ? 1 : 0);  // lighter blur only while recording 4K
-  g.uniform1f(u.contrast, state.contrast);
+  g.uniform1f(u.contrast, state.contrast * (cg.contrast||1));
   g.uniform1f(u.saturation, state.saturation);
   g.uniform1f(u.soften, state.soften);
 }
@@ -1885,7 +2118,7 @@ function doCapture(){
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
   if(state.scoreMode){ lastScore = computeScore(off); lastThumb = makeThumb(off);
-    if(lastPos){ shotMarks.push({lat:lastPos.lat,lng:lastPos.lng,score:lastScore.total}); if(mapOn) drawMiniMap(); }
+    if(lastPos){ shotMarks.push({lat:lastPos.lat,lng:lastPos.lng,score:lastScore.total}); } drawBarMap();
   } else { lastScore = null; }
   const fmt = state.imgFormat==='png' ? 'image/png' : 'image/jpeg';
   const ext = state.imgFormat==='png' ? 'png' : 'jpg';
@@ -2069,15 +2302,17 @@ function toast(msg){ els.toast.textContent=msg; els.toast.classList.add('show');
 function fmtShutter(t){ return t>=1 ? `${Math.round(t)}"` : `1/${Math.round(1/t)}`; }
 function syncLook(){
   const L=LOOKS[lookIndex];
-  els.lookBtn.textContent=L.tag; els.lookTag.textContent=L.name; els.rLook.textContent=L.tag;
+  els.lookBtn.textContent='FILM: '+L.tag; els.lookTag.textContent=L.name; els.rLook.textContent=L.tag;
 }
+function filmOwned(i){ if(i===0) return true;              // base look always available
+  if(LOOKS[i] && LOOKS[i].custom) return true;             // loaded .cube LUTs
+  return (typeof ownsFilm==='function') ? ownsFilm(i) : true; }
 function cycleLook(){
   for(let k=0;k<LOOKS.length;k++){
     lookIndex=(lookIndex+1)%LOOKS.length;
-    const locked = (typeof isLookUnlocked==='function') && LOOKS[lookIndex] && !LOOKS[lookIndex].custom && !isLookUnlocked(lookIndex);
-    if(!locked){ syncLook(); toast(LOOKS[lookIndex].name); return; }
+    if(filmOwned(lookIndex)){ syncLook(); toast(LOOKS[lookIndex].name); return; }
   }
-  syncLook();
+  lookIndex=0; syncLook();
 }
 function syncVals(){
   const f=APERTURES[state.aper], t=SHUTTERS[state.shut], iso=ISOS[state.iso];
@@ -2163,6 +2398,20 @@ function drawArms(c, pose, br, flash, ch, t){
       pxr(c,14,20+br,3,11,arm); pxr(c,14,31+br,3,3,skin);
       pxr(c,31,7+br,3,12,arm); pxr(c,31,4+br,3,3,skin);
       pxr(c,33,2+br,2,2,'#ffe14d');
+    } else if(pose==='dance'){
+      const s=Math.round(Math.sin((t||0)*6)*3), o=Math.abs(s);
+      pxr(c,13,10+br+o,3,10,arm); pxr(c,13,7+br+o,3,3,skin);         // left arm up (bobbing)
+      pxr(c,32,10+br-o,3,10,arm); pxr(c,32,7+br-o,3,3,skin);         // right arm up (opposite)
+    } else if(pose==='swat'){
+      pxr(c,14,20+br,3,11,arm); pxr(c,14,31+br,3,3,skin);            // left arm down
+      const sx=Math.round(Math.sin((t||0)*16)*3);
+      pxr(c,31,8+br,3,9,arm); pxr(c,31+sx,4+br,3,3,skin);            // right hand swatting by the head
+      pxr(c,34+Math.round(Math.sin((t||0)*3)*3), 3+Math.round(Math.cos((t||0)*4)*2),1,1,'#111'); // the bug
+    } else if(pose==='adjust'){
+      const fy=Math.sin((t||0)*8)>0?0:2;                            // fingers fiddling with the camera
+      pxr(c,13,22+br,4,7,arm); pxr(c,13,29+br,3,3,skin);
+      pxr(c,31,22+br+fy,4,7,arm); pxr(c,31,29+br+fy,3,3,skin);
+      pxr(c,31,30+br+fy,2,2,'#ffe14d');                             // adjustment glint
     } else {                                                        // idle / slump
       pxr(c,14,20+br,3,11,arm); pxr(c,14,31+br,3,3,skin);
       pxr(c,31,20+br,3,11,arm); pxr(c,31,31+br,3,3,skin);
@@ -2231,7 +2480,7 @@ function drawFigure(c, pose, t, flash, ch){
   c.save();
   const s = ch.scale||1; c.translate(24,54); c.scale(s,s); c.translate(-24,-54);
   const br = Math.round(Math.sin(t)*1);
-  const dyHead = br + (pose==='slump'?3:0);
+  const dyHead = br + (pose==='slump'?3:0) + (pose==='adjust'?2:0);
   const tTop = 19 + (pose==='slump'?2:0);
   const skin=ch.skin;
   pxr(c,16,54,16,2,'rgba(0,0,0,0.34)');                            // shadow
@@ -2293,8 +2542,7 @@ els.startBtn.addEventListener('click', ()=>{
   playOpening();                           // opening song (if not already playing)
   requestSensors();                        // ask for motion/orientation within the tap (iOS)
   spriteFlash = 1;                         // he takes the shot
-  els.startBtn.disabled = true;
-  setTimeout(()=>{ cancelAnimationFrame(spriteRAF); start(); }, 480);
+  setTimeout(()=>{ if(typeof openShop==='function') openShop('opening'); else start(); }, 420);  // visit the shop first
 });
 els.sndBtn.addEventListener('click', ()=>{ state.muted=!state.muted; els.sndBtn.classList.toggle('on', !state.muted);
   if(!state.muted){ audio(); beep(880,0.06,'square',0.05); } });
@@ -2405,7 +2653,7 @@ async function enableScoring(){
              const last = geoPath[geoPath.length-1];
              if(!last || Math.hypot(last.lat-lastPos.lat, last.lng-lastPos.lng) > 0.00003) geoPath.push({lat:lastPos.lat,lng:lastPos.lng});
              if(!geoRequested) geocode(lastPos.lat, lastPos.lng);
-             if(mapOn) drawMiniMap(); },
+             drawBarMap(); if(mapOn) drawMiniMap(); },
         ()=>{}, { enableHighAccuracy:true, maximumAge:10000, timeout:15000 });
     }catch(e){}
   }
@@ -2679,18 +2927,28 @@ async function shareCard(blob, score, rank){
     const W=1080, H=1350, c=document.createElement('canvas'); c.width=W; c.height=H;
     const g=c.getContext('2d');
     g.fillStyle='#07071a'; g.fillRect(0,0,W,H);
-    // photo area
-    const pad=48, pw=W-pad*2, ph=Math.round(pw*(img.height/img.width)), py=pad+70;
-    g.drawImage(img, pad, py, pw, Math.min(ph, H-py-220));
-    g.strokeStyle='#36e0ff'; g.lineWidth=8; g.strokeRect(pad,py,pw,Math.min(ph,H-py-220));
-    // title + score
-    g.textAlign='center'; g.fillStyle='#ffe14d';
-    g.font='bold 64px "Press Start 2P", monospace';
-    g.fillText('PHOTO MASTER', W/2, 70);
-    g.fillStyle='#ffe14d'; g.font='bold 96px monospace';
-    g.fillText(String(score), W/2-90, H-70);
+    // title
+    g.textAlign='center'; g.textBaseline='alphabetic';
+    g.fillStyle='#ffe14d'; g.font='bold 56px "Press Start 2P", monospace';
+    g.fillText('PHOTO MASTER', W/2, 86);
+    // photo — fit proportionally (no stretching) inside the box, centered
+    const pad=40, topY=128, botReserve=200;
+    const boxW=W-pad*2, boxH=H-topY-botReserve;
+    const sc=Math.min(boxW/img.width, boxH/img.height);
+    const dw=Math.round(img.width*sc), dh=Math.round(img.height*sc);
+    const dx=Math.round((W-dw)/2), dy=Math.round(topY+(boxH-dh)/2);
+    g.drawImage(img, dx, dy, dw, dh);
+    g.strokeStyle='#36e0ff'; g.lineWidth=8; g.strokeRect(dx,dy,dw,dh);
+    // score + rank, centered as one group
+    const sTxt=String(score), rTxt='RANK '+rank, cy=H-96;
+    g.textBaseline='middle';
+    g.font='bold 92px monospace'; const sw=g.measureText(sTxt+'   ').width;
+    g.font='bold 68px monospace'; const rw=g.measureText(rTxt).width;
+    const startX=(W-(sw+rw))/2;
+    g.textAlign='left';
+    g.fillStyle='#ffe14d'; g.font='bold 92px monospace'; g.fillText(sTxt, startX, cy);
     g.fillStyle = rank==='S'?'#ff5df2':(rank==='A'?'#ffe14d':'#36d07a');
-    g.font='bold 80px monospace'; g.fillText('RANK '+rank, W/2+180, H-74);
+    g.font='bold 68px monospace'; g.fillText(rTxt, startX+sw, cy);
     const out = await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
     const file = new File([out], 'photo-master.jpg', {type:'image/jpeg'});
     if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Photo Master'}); return; }
@@ -2725,6 +2983,364 @@ els.shareBtn.addEventListener('click',()=>{
 refreshXPUI(); refreshDailyUI();
 buildCharSelect();                                   // re-render tiles with unlock state
 if(!lsGet('pm_seen_tut')) els.tut.classList.add('on');  // first-launch tutorial
+
+/* =======================================================================
+   CAMERA SHOP — credits, cameras, film stocks, assignments, left-hand flip
+   ======================================================================= */
+var pmCredits = parseInt(lsGet('pm_credits','1200'),10); if(isNaN(pmCredits)) pmCredits=1200;
+function saveCredits(){ lsSet('pm_credits', pmCredits); refreshCreditsUI(); }
+function addCredits(n){ pmCredits += Math.max(0,Math.round(n)); saveCredits(); }
+function refreshCreditsUI(){
+  const t='🪙 '+pmCredits.toLocaleString()+' CREDITS';
+  if(els.credLine) els.credLine.textContent=t;
+  if(els.shopCred) els.shopCred.textContent=t;
+}
+
+/* ---- cameras (bodies) ---- */
+const CAMERAS = [
+  { id:'basic', name:'STARTER DIGICAM', cost:0,    desc:'Your trusty starter. No frills, always reliable.', perk:{}, body:'#2b2f3a', lens:'#39c' },
+  { id:'canon', name:'CANON',           cost:1500, desc:'Warm, flattering colour science. Vivid-colour bonus is easier.', perk:{color:0.06}, body:'#b23a2a', lens:'#e8c84d' },
+  { id:'nikon', name:'NIKON',           cost:2800, desc:'Crisp, detailed rendering. The Sharp bonus comes easier.', perk:{sharp:25}, body:'#1c1c1e', lens:'#ffe14d' },
+  { id:'sony',  name:'SONY',            cost:4500, desc:'Superb dynamic range & AF. Wider good-exposure range.', perk:{dark:0.05,bright:0.05}, body:'#2a2a2c', lens:'#ff8a3a' },
+  { id:'leica', name:'LEICA',           cost:9000, desc:'The legend. Pure prestige: +15% to every score.', perk:{mult:1.15}, body:'#121212', lens:'#c8102e' },
+];
+function ownedCams(){ try{ return JSON.parse(lsGet('pm_owned_cam','["basic"]')); }catch(e){ return ['basic']; } }
+function equippedCam(){ const e=lsGet('pm_cam','basic'); return ownedCams().indexOf(e)>=0?e:'basic'; }
+function camObj(id){ return CAMERAS.find(c=>c.id===id)||CAMERAS[0]; }
+function camPerk(){ const p=camObj(equippedCam()).perk||{}; return {sharp:p.sharp||0, color:p.color||0, dark:p.dark||0, bright:p.bright||0, mult:p.mult||1}; }
+// per-camera LOOK (base grade applied under the film look) + shooting features
+const CAM_GRADE = {
+  basic:{contrast:1.00, warmth:0,    feat:'Balanced digital · all lenses'},
+  canon:{contrast:1.03, warmth:2.5,  feat:'Warm colour science · all lenses'},
+  nikon:{contrast:1.08, warmth:0,    feat:'Crisp & punchy · all lenses'},
+  sony: {contrast:1.00, warmth:-1.5, feat:'Clean, cool · wide range · all lenses'},
+  leica:{contrast:1.22, warmth:0.5,  feat:'35mm prime only · higher contrast'},
+};
+function camGrade(){ return CAM_GRADE[equippedCam()] || CAM_GRADE.basic; }
+function camLensLocked(){ return equippedCam()==='leica'; }
+// apply the equipped camera's shooting features to the live camera UI
+function applyCameraFeatures(){
+  const locked = camLensLocked();
+  if(els.lensBtn) els.lensBtn.style.display = locked ? 'none' : '';
+  const zoomRow = (els.zoom && els.zoom.closest) ? els.zoom.closest('.row') : null;
+  if(zoomRow) zoomRow.style.display = locked ? 'none' : '';
+  if(locked){
+    try{ state.zoom=1; if(els.zoom) els.zoom.value=1; if(typeof setZoom==='function') setZoom(1); }catch(e){}
+    state.facing='environment';
+    if(els.flLabel){ els.flLabel.textContent='35mm'; els.flLabel.classList.add('on'); }
+  }
+}
+
+/* ---- film stocks (map to LOOKS 1..12) ---- */
+const FILM_STOCKS = [
+  {look:1,cost:600},{look:2,cost:600},{look:3,cost:800},{look:4,cost:800},{look:5,cost:900},
+  {look:6,cost:1100},{look:7,cost:1100},{look:8,cost:1300},{look:9,cost:1300},{look:10,cost:1400},
+  {look:11,cost:1700},{look:12,cost:2000},
+];
+function ownedFilm(){ try{ return JSON.parse(lsGet('pm_owned_film','[]')); }catch(e){ return []; } }
+function ownsFilm(i){ return ownedFilm().indexOf(i)>=0; }
+function anyFilmOwned(){ return ownedFilm().length>0; }
+// show/hide the FILM button + readout cell based on whether any stock is owned
+function refreshFilmUI(){
+  const show = anyFilmOwned();
+  els.lookBtn.classList.toggle('hidden', !show);
+  if(els.lookReadCell) els.lookReadCell.style.display = show ? '' : 'none';
+  if(!filmOwned(lookIndex)){ lookIndex=0; syncLook(); }
+}
+
+/* ---- shop pixel scene: player (left) + counter + shopkeeper (right) ---- */
+var shopT=0, shopRAF=0;
+// animated shopkeeper: alternates between "talking" (head bob + mouth) and "adjusting a camera"
+function drawShopkeeper(c, x, y, t){
+  const br=Math.round(Math.sin(t*1.3)*1);
+  const talking = (Math.sin(t*0.5) > 0);            // cycle talk / tinker every few seconds
+  const mouthOpen = talking && (Math.sin(t*9) > 0);
+  const fiddle = Math.round(Math.sin(t*4)*2);       // hands moving while adjusting
+  c.fillStyle='#caa27a'; c.fillRect(x+4,y+6+br,14,12);                    // head
+  c.fillStyle='#3a3a3a'; c.fillRect(x+2,y+2+br,18,5);                      // hair/cap
+  c.fillStyle='#1a1a1a'; c.fillRect(x+5,y+11+br,5,2); c.fillRect(x+12,y+11+br,5,2); // glasses
+  c.fillStyle='#6a4a2a'; c.fillRect(x+6,y+18+br,10,3);                     // beard
+  c.fillStyle='#3a1a12'; if(mouthOpen) c.fillRect(x+9,y+15+br,4,2);        // open mouth (talking)
+  c.fillStyle='#2e6b8a'; c.fillRect(x,y+20+br,22,16);                      // apron/shirt
+  c.fillStyle='#cfe8ff'; c.fillRect(x+8,y+20+br,6,10);                     // apron bib
+  if(talking){
+    c.fillStyle='#caa27a'; c.fillRect(x-2,y+22+br,4,10); c.fillRect(x+20,y+22+br,4,10); // arms resting
+    // little speech dots above the head
+    c.fillStyle='#fff'; const d=(Math.floor(t*3)%3);
+    for(let i=0;i<=d;i++) c.fillRect(x+20+i*4, y-2+br, 2,2);
+  } else {
+    // adjusting a camera on the counter: hands dip toward a small camera
+    c.fillStyle='#caa27a'; c.fillRect(x+1,y+24+br,4,8); c.fillRect(x+17,y+24+fiddle,4,8);
+    c.fillStyle='#111'; c.fillRect(x+6,y+30,12,6);                         // camera on counter
+    c.fillStyle='#8fd'; c.fillRect(x+10,y+32,4,3);
+    c.fillStyle='#ffe14d'; if(fiddle>0) c.fillRect(x+16,y+29,2,2);         // adjustment glint
+  }
+}
+// background worker restocking a shelf (arms moving)
+function drawWorker(c, x, y, t){
+  const lift=Math.round(Math.abs(Math.sin(t*3))*3);
+  c.fillStyle='#d0a884'; c.fillRect(x+3,y,8,8);                            // head
+  c.fillStyle='#5a3a2a'; c.fillRect(x+2,y-2,10,4);                         // hair
+  c.fillStyle='#8a5a3a'; c.fillRect(x,y+8,14,11);                          // shirt
+  c.fillStyle='#d0a884'; c.fillRect(x-2,y+9-lift,3,7); c.fillRect(x+13,y+9-lift,3,7); // arms reaching up/down
+  c.fillStyle='#111'; c.fillRect(x+14,y+6-lift,6,4);                       // camera being placed
+}
+function drawShopScene(){
+  const cv=els.shopScene; if(!cv) return; const c=cv.getContext('2d'); const W=cv.width,H=cv.height;
+  c.imageSmoothingEnabled=false; c.clearRect(0,0,W,H);
+  c.fillStyle='#3a2a1a'; c.fillRect(0,0,W,H);                              // wall
+  c.fillStyle='#5a4028'; for(let sy=14; sy<80; sy+=22){ c.fillRect(10,sy,W-20,4); }   // shelves
+  const cols=['#b23a2a','#1c1c1e','#2a2a2c','#121212','#2b2f3a'];
+  for(let sy=16, k=0; sy<78; sy+=22){ for(let sx=18; sx<W-24; sx+=30){ c.fillStyle=cols[k++%cols.length]; c.fillRect(sx,sy-9,16,8); c.fillStyle='#8fd'; c.fillRect(sx+5,sy-7,5,4);} }
+  // background worker restocking (upper-left shelf area)
+  drawWorker(c, 70, 20, shopT+2);
+  // counter
+  c.fillStyle='#2a1a0e'; c.fillRect(0,H-34,W,34);
+  c.fillStyle='#6a4a2a'; c.fillRect(0,H-36,W,4);
+  // shopkeeper behind counter (right)
+  drawShopkeeper(c, W-70, H-78, shopT);
+  // player (left), uses the selected character head/colours, with a gentle breathing bob
+  const ch=(typeof currentChar==='function')?currentChar():{skin:'#e3b48a',hair:'#3a2a1a',hairStyle:'hat',shades:true};
+  const px=28, py=H-74, br=Math.round(Math.sin(shopT+1)*1);
+  c.fillStyle=ch.skin; c.fillRect(px+4,py+6+br,12,12);
+  c.fillStyle=ch.hair; c.fillRect(px+2,py+2+br,16,5);
+  if(ch.hairStyle==='hat'){ c.fillStyle='#0a0a0a'; c.fillRect(px+1,py+4+br,18,2); }
+  if(ch.shades){ c.fillStyle='#090909'; c.fillRect(px+5,py+10+br,10,3); }
+  c.fillStyle=ch.torso||'#2b2f3a'; c.fillRect(px,py+18+br,20,18);
+}
+function shopLoop(){ shopT+=0.08; drawShopScene(); shopRAF=requestAnimationFrame(shopLoop); }
+
+/* ---- shop tabs + list ---- */
+var shopTab='cam';
+const SHOP_LINES = [
+  'Welcome in! Buy a body, grab some film — or take an assignment.',
+  'A Leica? Bold choice. Your wallet weeps, your scores soar.',
+  'Film stocks change the whole mood. Try a few.',
+  'Finish my assignments and I\'ll pay you well.',
+  'Tap me anytime for a tip, friend.'
+];
+function shopSay(msg){ if(els.shopBubble) els.shopBubble.textContent=msg; }
+function renderShop(){
+  refreshCreditsUI();
+  document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('sel', b.dataset.tab===shopTab));
+  renderAssignment();
+  const list=els.shopList; list.innerHTML='';
+  if(shopTab==='cam'){
+    const own=ownedCams(), eq=equippedCam();
+    CAMERAS.forEach(cam=>{
+      const owned=own.indexOf(cam.id)>=0, equipped=(eq===cam.id);
+      const row=document.createElement('div'); row.className='shopitem'+(cam.id==='leica'?' gold':'');
+      const cv=document.createElement('canvas'); cv.width=34; cv.height=34; const g=cv.getContext('2d');
+      g.imageSmoothingEnabled=false; g.fillStyle='#0a0a1e'; g.fillRect(0,0,34,34);
+      g.fillStyle=cam.body; g.fillRect(6,12,22,14); g.fillStyle='#111'; g.fillRect(13,8,8,5);
+      g.fillStyle=cam.lens; g.beginPath(); g.arc(17,19,6,0,7); g.fill();
+      row.appendChild(cv);
+      const info=document.createElement('div'); info.className='info';
+      info.innerHTML='<div class="nm">'+cam.name+(cam.cost?'  🪙'+cam.cost.toLocaleString():' (free)')+'</div><div class="ds">'+cam.desc+'</div>';
+      row.appendChild(info);
+      const btn=document.createElement('button'); btn.className='buy';
+      if(equipped){ btn.textContent='EQUIPPED'; btn.classList.add('eq'); }
+      else if(owned){ btn.textContent='EQUIP'; btn.classList.add('own'); btn.onclick=()=>{ lsSet('pm_cam',cam.id); shopSay('The '+cam.name+' is ready. Go make art.'); renderShop(); if(!state.muted){audio();beep(760,0.06,'square',0.05);} }; }
+      else if(pmCredits>=cam.cost){ btn.textContent='BUY'; btn.onclick=()=>{ pmCredits-=cam.cost; const o=ownedCams(); o.push(cam.id); lsSet('pm_owned_cam',JSON.stringify(o)); lsSet('pm_cam',cam.id); saveCredits(); shopSay('Sold! The '+cam.name+' is yours and equipped.'); renderShop(); if(!state.muted){audio();beep(880,0.08,'square',0.06);beep(1320,0.1,'square',0.05,0.08);} }; }
+      else { btn.textContent='NEED 🪙'+cam.cost.toLocaleString(); btn.classList.add('cant'); btn.onclick=()=>shopSay('Not enough credits yet — go shoot a round!'); }
+      row.appendChild(btn); list.appendChild(row);
+    });
+  } else {
+    const own=ownedFilm();
+    FILM_STOCKS.forEach(fs=>{
+      const L=LOOKS[fs.look], owned=own.indexOf(fs.look)>=0;
+      const row=document.createElement('div'); row.className='shopitem';
+      const cv=document.createElement('canvas'); cv.width=34; cv.height=34; const g=cv.getContext('2d');
+      g.imageSmoothingEnabled=false; g.fillStyle='#120a06'; g.fillRect(0,0,34,34);
+      g.fillStyle='#d9c27a'; g.fillRect(8,4,18,26); g.fillStyle='#2a1a0e'; g.fillRect(8,4,18,4); g.fillStyle='#b23a2a'; g.fillRect(12,10,10,14); // film canister
+      row.appendChild(cv);
+      const info=document.createElement('div'); info.className='info';
+      info.innerHTML='<div class="nm">'+L.name+'  🪙'+fs.cost.toLocaleString()+'</div><div class="ds">Film stock · tag '+L.tag+'</div>';
+      row.appendChild(info);
+      const btn=document.createElement('button'); btn.className='buy';
+      if(owned){ btn.textContent='OWNED'; btn.classList.add('own'); }
+      else if(pmCredits>=fs.cost){ btn.textContent='BUY'; btn.onclick=()=>{ pmCredits-=fs.cost; const o=ownedFilm(); o.push(fs.look); lsSet('pm_owned_film',JSON.stringify(o)); saveCredits(); shopSay(L.name+' loaded! Find it on the FILM button.'); refreshFilmUI(); renderShop(); if(!state.muted){audio();beep(880,0.08,'square',0.06);} }; }
+      else { btn.textContent='NEED 🪙'+fs.cost.toLocaleString(); btn.classList.add('cant'); btn.onclick=()=>shopSay('Earn more credits and come back for that roll.'); }
+      row.appendChild(btn); list.appendChild(row);
+    });
+  }
+}
+
+/* ---- assignments (owner-given jobs for credits) ---- */
+const ASSIGNMENTS = [
+  { id:'a_gold', name:'Golden Hour', desc:'Land 2 golden-ratio shots in one round.', need:2, reward:800, scope:'shot', test:r=>r.goldenHit },
+  { id:'a_color',name:'Colour Pop',  desc:'Capture 5 vivid-colour shots.',          need:5, reward:700, scope:'shot', test:r=>r.colorful>0.33 },
+  { id:'a_red',  name:'Seeing Red',  desc:'Shoot 3 strongly RED frames.',            need:3, reward:700, scope:'shot', test:r=>r.redness>0.12 },
+  { id:'a_sharp',name:'Razor Focus', desc:'Take 6 tack-sharp shots.',                need:6, reward:800, scope:'shot', test:r=>r.lapVar>=120 },
+  { id:'a_perf', name:'Perfectionist',desc:'Nail 1 PERFECT shot.',                   need:1, reward:1500,scope:'shot', test:r=>r.perfect },
+  { id:'a_srank',name:'Top Marks',   desc:'Finish a round at S-rank.',               need:1, reward:1200,scope:'round',test:(t,rk)=>rk==='S' },
+  { id:'a_big',  name:'Big Numbers', desc:'Score 18,000+ in a single round.',        need:1, reward:1000,scope:'round',test:(t)=>t>=18000 },
+  { id:'a_thirds',name:'Thirds Pro', desc:'Hit all 4 thirds dots in one shot.',      need:1, reward:1000,scope:'shot', test:r=>r.dotsHit>=4 },
+];
+function getAssign(){ try{ return JSON.parse(lsGet('pm_assign','null')); }catch(e){ return null; } }
+function setAssign(a){ lsSet('pm_assign', a?JSON.stringify(a):''); }
+function offerAssign(){ // returns the id currently offered (rotates when none active/offered)
+  let off=lsGet('pm_assign_offer','');
+  if(!off){ off=ASSIGNMENTS[(Math.random()*ASSIGNMENTS.length)|0].id; lsSet('pm_assign_offer',off); }
+  return off;
+}
+function renderAssignment(){
+  const box=els.assignBox; if(!box) return;
+  const active=getAssign();
+  if(active){
+    const A=ASSIGNMENTS.find(x=>x.id===active.id);
+    box.innerHTML='<div class="at">◆ ASSIGNMENT: '+A.name+'</div><div class="ad">'+A.desc+'</div>'
+      +'<div class="prog">Progress: '+Math.min(active.prog,A.need)+'/'+A.need+'</div>'
+      +'<div class="arew">Reward: 🪙'+A.reward.toLocaleString()+'</div>'
+      +'<button id="assignDrop">ABANDON</button>';
+    document.getElementById('assignDrop').onclick=()=>{ setAssign(null); lsSet('pm_assign_offer',''); shopSay('No worries. Here\'s another when you\'re ready.'); renderShop(); };
+  } else {
+    const A=ASSIGNMENTS.find(x=>x.id===offerAssign())||ASSIGNMENTS[0];
+    box.innerHTML='<div class="at">◆ NEW ASSIGNMENT: '+A.name+'</div><div class="ad">'+A.desc+'</div>'
+      +'<div class="arew">Reward: 🪙'+A.reward.toLocaleString()+'</div>'
+      +'<button id="assignTake">ACCEPT JOB</button>';
+    document.getElementById('assignTake').onclick=()=>{ setAssign({id:A.id, prog:0}); shopSay('Great! Complete it in your next rounds for '+A.reward+' credits.'); renderShop(); if(!state.muted){audio();beep(700,0.07,'square',0.05);} };
+  }
+}
+function assignOnShot(res){
+  const a=getAssign(); if(!a) return; const A=ASSIGNMENTS.find(x=>x.id===a.id); if(!A||A.scope!=='shot') return;
+  if(A.test(res)){ a.prog=(a.prog||0)+1; setAssign(a);
+    if(a.prog>=A.need) completeAssign(A); else toast('Assignment '+a.prog+'/'+A.need); }
+}
+function assignOnRound(total, rank){
+  const a=getAssign(); if(!a) return; const A=ASSIGNMENTS.find(x=>x.id===a.id); if(!A||A.scope!=='round') return;
+  if(A.test(total, rank)){ a.prog=A.need; setAssign(a); completeAssign(A); }
+}
+function completeAssign(A){
+  addCredits(A.reward); setAssign(null); lsSet('pm_assign_offer','');
+  if(typeof unlockAch==='function'){} // (no specific trophy)
+  toast('🪙 ASSIGNMENT DONE +'+A.reward); if(!state.muted){ audio(); [660,880,1320].forEach((f,i)=>beep(f,0.12,'square',0.06,i*0.09)); }
+}
+
+/* ---- credits earned per round ---- */
+function pmAwardCredits(total, rank){
+  const earned = Math.max(20, Math.round(total/12));
+  addCredits(earned);
+  const base = els.resXP ? els.resXP.textContent : '';
+  if(els.resXP) els.resXP.textContent = base + '  ·  🪙 +'+earned.toLocaleString();
+}
+
+/* ---- shop open/close + flow ---- */
+var shopReturn='opening';
+function openShop(from){
+  shopReturn = from||'opening';
+  els.overlay && (els.overlay.style.display='none');
+  els.results && els.results.classList.remove('open');
+  renderShop(); els.shop.classList.add('on');
+  cancelAnimationFrame(shopRAF); shopLoop();
+}
+function closeShop(){ els.shop.classList.remove('on'); cancelAnimationFrame(shopRAF); }
+els.shopBtn && els.shopBtn.addEventListener('click', ()=>{ audio(); openShop('opening'); });
+els.resShop && els.resShop.addEventListener('click', ()=>{ if(typeof commitRound==='function') commitRound(); if(typeof stopFireworks==='function') stopFireworks(); openShop('results'); });
+els.shopBack && els.shopBack.addEventListener('click', ()=>{ closeShop();
+  if(shopReturn==='results'){ els.results.classList.add('open'); } else { els.overlay.style.display='flex'; } });
+document.querySelectorAll('.stab').forEach(b=>b.addEventListener('click', ()=>{ shopTab=b.dataset.tab; renderShop(); }));
+els.shopScene && els.shopScene.addEventListener('click', ()=>{ shopSay(SHOP_LINES[(Math.random()*SHOP_LINES.length)|0]); });
+els.shopStart && els.shopStart.addEventListener('click', async ()=>{
+  closeShop(); refreshFilmUI();
+  if(typeof cameraStarted!=='undefined' && cameraStarted){        // returning from a round → just start a new one
+    els.results.classList.remove('open');
+    state.scoreMode=true; els.scoreBtn.classList.add('on');
+    await enableScoring(); startRound();
+  } else {
+    cancelAnimationFrame(spriteRAF); start();
+  }
+});
+
+/* ---- track whether the camera has been initialised ---- */
+var cameraStarted=false;
+(function(){ const _start=start; start=async function(){ const r=await _start.apply(this,arguments); cameraStarted=true; drawBarMap(); if(typeof applyCameraFeatures==='function') applyCameraFeatures(); return r; }; })();
+
+/* ---- left-hand shooter: flip controls based on how the phone is rotated ---- */
+function applyOrientationFlip(){
+  let ang = 0;
+  try{ ang = (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
+            : (typeof window.orientation==='number' ? window.orientation : 0); }catch(e){}
+  // one landscape direction (angle 90) puts controls on the left for left-handed shooting
+  els.stage && els.stage.classList.toggle('lh', ang===90);
+}
+window.addEventListener('orientationchange', ()=>setTimeout(applyOrientationFlip,200));
+window.addEventListener('resize', applyOrientationFlip);
+applyOrientationFlip();
+
+refreshCreditsUI(); refreshFilmUI();
+
+/* =======================================================================
+   HOME / LOADOUT hub — big animated character, pick camera & film, trophies
+   ======================================================================= */
+var homePose='wave', homeT=0, homeRAF=0, homeNext=0, homeReturn='opening';
+const HOME_POSES=['wave','dance','swat','adjust','idle'];
+function homeLoop(){
+  homeT+=0.09; const now=performance.now();
+  if(now>homeNext){ homePose=HOME_POSES[(Math.random()*HOME_POSES.length)|0]; homeNext=now+2200+Math.random()*2200; }
+  const c=els.homeChar && els.homeChar.getContext('2d');
+  if(c) drawFigure(c, homePose, homeT, 0, currentChar());
+  homeRAF=requestAnimationFrame(homeLoop);
+}
+function camIconCanvas(cam, size){
+  const cv=document.createElement('canvas'); cv.width=size; cv.height=size; const g=cv.getContext('2d');
+  g.imageSmoothingEnabled=false; g.fillStyle='#0a0a1e'; g.fillRect(0,0,size,size);
+  const s=size/34; g.fillStyle=cam.body; g.fillRect(6*s,12*s,22*s,14*s); g.fillStyle='#111'; g.fillRect(13*s,8*s,8*s,5*s);
+  g.fillStyle=cam.lens; g.beginPath(); g.arc(17*s,19*s,6*s,0,7); g.fill(); return cv;
+}
+function renderHome(){
+  els.homeName.textContent = currentChar().name;
+  // achievements strip
+  if(typeof ACH!=='undefined'){
+    els.homeAch.innerHTML='';
+    ACH.forEach(a=>{ const got=hasAch(a.id); const d=document.createElement('div');
+      d.className='ai '+(got?'got':'locked'); d.textContent=got?a.ic:'🔒'; d.title=a.n; els.homeAch.appendChild(d); });
+    els.homeAch.onclick=()=>{ if(typeof renderAch==='function') renderAch(); els.ach.classList.add('on'); };
+  }
+  // owned cameras (pick to equip)
+  const own=ownedCams(), eq=equippedCam();
+  els.homeCam.innerHTML='';
+  CAMERAS.filter(c=>own.indexOf(c.id)>=0).forEach(cam=>{
+    const t=document.createElement('div'); t.className='ct'+(cam.id===eq?' sel':'');
+    t.appendChild(camIconCanvas(cam,30));
+    const nm=document.createElement('div'); nm.className='cn'; nm.textContent=cam.name.replace(' DIGICAM',''); t.appendChild(nm);
+    t.onclick=()=>{ lsSet('pm_cam',cam.id); if(typeof applyCameraFeatures==='function') applyCameraFeatures();
+      renderHome(); if(!state.muted){ audio(); beep(760,0.06,'square',0.05);} };
+    els.homeCam.appendChild(t);
+  });
+  // features line
+  const cg=camGrade(); els.homeFeat.textContent='◆ '+camObj(eq).name.replace(' DIGICAM','')+': '+cg.feat;
+  // camera bag — film chips (base + owned)
+  els.homeBag.innerHTML='';
+  const films=[0].concat(ownedFilm());
+  films.forEach(i=>{ const L=LOOKS[i]; const fc=document.createElement('div');
+    fc.className='fc'+(i===0?' base':'')+(i===lookIndex?' sel':''); fc.textContent=(i===0?'STD':L.tag);
+    fc.title=L.name; fc.onclick=()=>{ lookIndex=i; syncLook(); renderHome(); if(!state.muted){ audio(); beep(620+i*40,0.05,'square',0.05);} };
+    els.homeBag.appendChild(fc); });
+  if(ownedFilm().length===0){ const e=document.createElement('div'); e.className='fc empty'; e.textContent='buy film in the shop'; els.homeBag.appendChild(e); }
+}
+function openHome(from){
+  homeReturn = from||'opening';
+  els.overlay && (els.overlay.style.display='none');
+  els.results && els.results.classList.remove('open');
+  renderHome(); els.home.classList.add('on');
+  homeNext=0; cancelAnimationFrame(homeRAF); homeLoop();
+}
+function closeHome(){ els.home.classList.remove('on'); cancelAnimationFrame(homeRAF); }
+els.homeBtn && els.homeBtn.addEventListener('click', ()=>{ audio(); openHome('opening'); });
+els.resHome && els.resHome.addEventListener('click', ()=>{ if(typeof commitRound==='function') commitRound(); if(typeof stopFireworks==='function') stopFireworks(); openHome('results'); });
+els.homeBack && els.homeBack.addEventListener('click', ()=>{ closeHome();
+  if(homeReturn==='results'){ els.results.classList.add('open'); } else { els.overlay.style.display='flex'; } });
+els.homeShop && els.homeShop.addEventListener('click', ()=>{ closeHome(); if(typeof openShop==='function') openShop(homeReturn); });
+els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
+  closeHome(); refreshFilmUI();
+  if(typeof cameraStarted!=='undefined' && cameraStarted){
+    els.results.classList.remove('open');
+    state.scoreMode=true; els.scoreBtn.classList.add('on');
+    if(typeof applyCameraFeatures==='function') applyCameraFeatures();
+    await enableScoring(); startRound();
+  } else { cancelAnimationFrame(spriteRAF); start(); }
+});
 </script>
 </body>
 </html>
