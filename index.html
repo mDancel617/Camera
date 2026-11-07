@@ -352,6 +352,11 @@
   .assign button{all:unset; cursor:pointer; font-size:8px; color:#07071a; background:#5bff9d; padding:8px 12px;
     border-radius:5px; box-shadow:3px 3px 0 #0a7d4a; margin-top:4px}
   .assign .prog{font-size:8px; color:#36e0ff}
+  .shopsel{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px; max-width:360px}
+  .ssh{all:unset; cursor:pointer; font-family:var(--pixel); font-size:7px; color:#9fb4e6;
+    background:linear-gradient(180deg,#1b2140,#11152b); border:1px solid #39407a; padding:6px 8px; border-radius:3px}
+  .ssh.sel{color:#07071a; background:linear-gradient(180deg,#ffe14d,#f2b300); border-color:#b3820a}
+  .ssh.lock{color:#8a6a4a; border-color:#3a2a1a; background:rgba(20,14,8,.5)}
   .shoptabs{display:flex; gap:8px; margin-bottom:8px}
   .stab{all:unset; cursor:pointer; font-family:var(--pixel); font-size:9px; color:#9fb4e6;
     background:linear-gradient(180deg,#1b2140,#11152b); border:1px solid #39407a; padding:8px 14px; border-radius:4px}
@@ -386,7 +391,7 @@
   .hcol{flex:0 0 84px; display:flex; flex-direction:column; align-items:center; gap:6px}
   .hlbl{font-size:7px; color:#36e0ff; letter-spacing:1px; text-align:center}
   .hcenter{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px}
-  #homeChar{width:120px; height:145px; image-rendering:pixelated; filter:drop-shadow(3px 4px 0 rgba(0,0,0,.5))}
+  #homeChar{width:168px; height:203px; image-rendering:pixelated; filter:drop-shadow(4px 5px 0 rgba(0,0,0,.5))}
   .hname{font-size:10px; color:#ffe14d; text-shadow:2px 2px 0 #c0392b}
   .achstrip{display:flex; flex-wrap:wrap; gap:5px; justify-content:center; align-content:flex-start}
   .achstrip .ai{width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:14px;
@@ -409,6 +414,18 @@
   .bag .fc.empty{background:none; border:1px dashed #6a4a2a; color:#8a6a4a; cursor:default}
   .homebtns{width:100%; max-width:380px; margin-top:12px; display:flex; flex-direction:column; gap:9px}
   .homebtns2{display:flex; gap:10px; justify-content:center}
+  @media (orientation:landscape) and (max-height:600px){
+    .home{padding-top:calc(env(safe-area-inset-top) + 8px); padding-bottom:calc(env(safe-area-inset-bottom) + 8px)}
+    .home h2{font-size:12px; margin:0 0 4px}
+    #homeChar{width:126px; height:152px}
+    .homemid{max-width:760px; gap:18px; align-items:center}
+    .hcol{flex:0 0 130px}
+    .camfeat{margin:5px 0 2px}
+    .bag{padding:6px}
+    .bagwrap{max-width:620px}
+    .homebtns{max-width:560px; margin-top:8px}
+    .homebtns .shopstart{padding:11px}
+  }
 
   /* ===== new bottom bar: [map] [shutter] [CAMERA/FILM] ===== */
   #mapBtn, #minimap, #mapLabel{ display:none !important }   /* map now lives in the bar */
@@ -819,8 +836,9 @@
 </div>
 
 <div class="shop" id="shop">
-  <h2>CAMERA SHOP</h2>
+  <h2 id="shopTitle">CAMERA SHOP</h2>
   <div class="shopcred" id="shopCred">🪙 0 CREDITS</div>
+  <div class="shopsel" id="shopSel"></div>
   <canvas id="shopScene" width="320" height="150"></canvas>
   <div class="bubble" id="shopBubble">Welcome in! Buy a body, grab some film — or take an assignment for extra credits.</div>
   <div class="assign" id="assignBox"></div>
@@ -1498,6 +1516,7 @@ const els = {
   credLine:el('credLine'), shopBtn:el('shopBtn'), resShop:el('resShop'),
   shop:el('shop'), shopCred:el('shopCred'), shopScene:el('shopScene'), shopBubble:el('shopBubble'),
   assignBox:el('assignBox'), shopList:el('shopList'), shopStart:el('shopStart'), shopBack:el('shopBack'),
+  shopSel:el('shopSel'), shopTitle:el('shopTitle'),
   barLeft:el('barLeft'), barRight:el('barRight'), barmap:el('barmap'),
   lookReadCell:el('lookReadCell'), stage:el('stage'),
   homeBtn:el('homeBtn'), resHome:el('resHome'), home:el('home'), homeChar:el('homeChar'), homeName:el('homeName'),
@@ -2118,6 +2137,7 @@ function doCapture(){
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
   if(state.scoreMode){ lastScore = computeScore(off); lastThumb = makeThumb(off);
+    if(typeof checkSubjectShot==='function') checkSubjectShot(off);   // subject assignments (dog/cat/tree/…)
     if(lastPos){ shotMarks.push({lat:lastPos.lat,lng:lastPos.lng,score:lastScore.total}); } drawBarMap();
   } else { lastScore = null; }
   const fmt = state.imgFormat==='png' ? 'image/png' : 'image/jpeg';
@@ -2381,14 +2401,18 @@ function drawHairHat(c, ch, dy){
 }
 function drawArms(c, pose, br, flash, ch, t){
   const arm=ch.arm, skin=ch.skin;
-  if(pose==='ready' || pose==='shoot'){
-    pxr(c,13,14+br,4,8,arm); pxr(c,31,14+br,4,8,arm);               // arms up
-    pxr(c,14,12+br,3,3,skin); pxr(c,31,12+br,3,3,skin);            // hands
-    pxr(c,18,11+br,13,7,'#111'); pxr(c,20,9+br,4,2,'#111');         // camera
-    pxr(c,22,12+br,6,5,'#333'); pxr(c,23,13+br,4,3,'#39c'); pxr(c,29,10+br,3,2,'#444');
+  // the held camera reflects the equipped body/lens colours
+  const CAM=(typeof camObj==='function'&&typeof equippedCam==='function')?camObj(equippedCam()):null;
+  const camBody=CAM?CAM.body:'#111', camLens=CAM?CAM.lens:'#39c';
+  if(pose==='ready' || pose==='shoot' || pose==='playcam'){
+    const fid = pose==='playcam' ? Math.round(Math.sin((t||0)*5)*1) : 0;   // fiddling with the camera
+    pxr(c,13,14+br,4,8,arm); pxr(c,31,14+br+fid,4,8,arm);          // arms up
+    pxr(c,14,12+br,3,3,skin); pxr(c,31,12+br+fid,3,3,skin);        // hands
+    pxr(c,18,11+br,13,7,camBody); pxr(c,20,9+br,4,2,camBody);       // camera body
+    pxr(c,22,12+br,6,5,'#333'); pxr(c,23,13+br,4,3,camLens); pxr(c,29,10+br,3,2,'#444'); // lens + shoe
     if(flash>0){ c.fillStyle='rgba(255,255,230,'+flash+')'; c.beginPath(); c.arc(31,12+br,2+flash*16,0,7); c.fill(); }
   } else {
-    pxr(c,21,24+br,8,5,'#111'); pxr(c,23,25+br,4,3,'#39c');         // camera at chest
+    pxr(c,21,24+br,8,5,camBody); pxr(c,23,25+br,4,3,camLens);       // camera at chest (equipped colours)
     pxr(c,20,19+br,1,6,'#0a0a0a'); pxr(c,29,19+br,1,6,'#0a0a0a');   // strap
     if(pose==='wave'){
       pxr(c,14,20+br,3,11,arm); pxr(c,14,31+br,3,3,skin);
@@ -2508,9 +2532,13 @@ function drawFigure(c, pose, t, flash, ch){
     pxr(c,22,tTop+br,4,10,ch.shirt||'#e8e8ec'); pxr(c,23,tTop+br,2,8,ch.accent); // shirt + tie
     pxr(c,16,tTop+br,3,14,ch.torsoDark||'#1f222a'); pxr(c,29,tTop+br,3,14,ch.torsoDark||'#1f222a'); // lapels
   }
-  // head + hair/hat
+  // head + hair/hat (the 'look' pose pans the head around, relaxed)
+  const lookX = pose==='look' ? Math.round(Math.sin(t*0.9)*3) : 0;
+  const lookY = pose==='look' ? Math.round(Math.sin(t*0.6)*2) : 0;
+  c.save(); c.translate(lookX, lookY);
   pxr(c,20,6+dyHead,9,10,skin);
   drawHairHat(c,ch,dyHead);
+  c.restore();
   // arms + camera (shared across all characters)
   drawArms(c,pose,br,flash,ch,t);
   c.restore();
@@ -2996,28 +3024,46 @@ function refreshCreditsUI(){
   if(els.shopCred) els.shopCred.textContent=t;
 }
 
-/* ---- cameras (bodies) ---- */
-const CAMERAS = [
-  { id:'basic', name:'STARTER DIGICAM', cost:0,    desc:'Your trusty starter. No frills, always reliable.', perk:{}, body:'#2b2f3a', lens:'#39c' },
-  { id:'canon', name:'CANON',           cost:1500, desc:'Warm, flattering colour science. Vivid-colour bonus is easier.', perk:{color:0.06}, body:'#b23a2a', lens:'#e8c84d' },
-  { id:'nikon', name:'NIKON',           cost:2800, desc:'Crisp, detailed rendering. The Sharp bonus comes easier.', perk:{sharp:25}, body:'#1c1c1e', lens:'#ffe14d' },
-  { id:'sony',  name:'SONY',            cost:4500, desc:'Superb dynamic range & AF. Wider good-exposure range.', perk:{dark:0.05,bright:0.05}, body:'#2a2a2c', lens:'#ff8a3a' },
-  { id:'leica', name:'LEICA',           cost:9000, desc:'The legend. Pure prestige: +15% to every score.', perk:{mult:1.15}, body:'#121212', lens:'#c8102e' },
+/* ---- cameras (bodies) — each has a perk, a base LOOK grade, and shooting features ---- */
+var CAMERAS = [
+  { id:'basic', name:'STARTER DIGICAM', cost:0,    desc:'Your trusty starter. No frills, always reliable.', perk:{}, body:'#2b2f3a', lens:'#39c', grade:{contrast:1.00,warmth:0,feat:'Balanced digital · all lenses'} },
+  { id:'canon', name:'CANON',           cost:1500, desc:'Warm, flattering colour science. Vivid-colour bonus is easier.', perk:{color:0.06}, body:'#b23a2a', lens:'#e8c84d', grade:{contrast:1.03,warmth:2.5,feat:'Warm colour science · all lenses'} },
+  { id:'nikon', name:'NIKON',           cost:2800, desc:'Crisp, detailed rendering. The Sharp bonus comes easier.', perk:{sharp:25}, body:'#1c1c1e', lens:'#ffe14d', grade:{contrast:1.08,warmth:0,feat:'Crisp & punchy · all lenses'} },
+  { id:'sony',  name:'SONY',            cost:4500, desc:'Superb dynamic range & AF. Wider good-exposure range.', perk:{dark:0.05,bright:0.05}, body:'#2a2a2c', lens:'#ff8a3a', grade:{contrast:1.00,warmth:-1.5,feat:'Clean, cool · wide range · all lenses'} },
+  { id:'leica', name:'LEICA',           cost:9000, desc:'The legend. 35mm prime only, higher contrast, +15% score.', perk:{mult:1.15}, body:'#121212', lens:'#c8102e', grade:{contrast:1.22,warmth:0.5,feat:'35mm prime only · higher contrast'} },
+  // RETRO RELICS
+  { id:'fuji',  name:'FUJIFILM',        cost:3200, desc:'Gorgeous film-simulation colour straight out of camera.', perk:{color:0.07}, body:'#3a3a3f', lens:'#5bd', grade:{contrast:1.06,warmth:1.5,feat:'Film-sim colour · all lenses'} },
+  { id:'olympus',name:'OLYMPUS',        cost:4200, desc:'Tiny, sharp micro-four-thirds. Great detail.', perk:{sharp:20}, body:'#d8d2c4', lens:'#39c', grade:{contrast:1.05,warmth:0.5,feat:'Compact & crisp · all lenses'} },
+  { id:'rollei',name:'ROLLEIFLEX',      cost:7000, desc:'Dreamy twin-lens square look. +10% score.', perk:{mult:1.10}, body:'#26201a', lens:'#cfc9b0', grade:{contrast:1.12,warmth:1.0,feat:'Dreamy square render'} },
+  // PRO GEAR CO.
+  { id:'hassel',name:'HASSELBLAD',      cost:14000,desc:'Medium-format richness. Lush colour, +20% score.', perk:{mult:1.20,color:0.04}, body:'#1a2a3a', lens:'#ffd24d', grade:{contrast:1.1,warmth:0.5,feat:'Medium-format richness'} },
+  { id:'phase', name:'PHASE ONE',       cost:22000,desc:'Insane resolution & detail. Easiest Sharp, +10%.', perk:{sharp:40,mult:1.10}, body:'#0e0e10', lens:'#9fe', grade:{contrast:1.14,warmth:0,feat:'Ultra detail · all lenses'} },
+  { id:'cinee', name:'CINE RIG',        cost:17000,desc:'Cinematic motion-picture look. +15% score.', perk:{mult:1.15}, body:'#2a1a1a', lens:'#ff6b6b', grade:{contrast:1.18,warmth:1.5,feat:'Cinematic teal-orange'} },
+  // STREET LAB
+  { id:'ricoh', name:'RICOH GR',        cost:5000, desc:'The ultimate street snapper. High-contrast and sharp.', perk:{sharp:25}, body:'#141416', lens:'#36e0ff', grade:{contrast:1.2,warmth:0,feat:'Street snap · high contrast'} },
+  { id:'x100',  name:'FUJI X100',       cost:8000, desc:'Classic rangefinder styling with beautiful colour.', perk:{color:0.05,sharp:10}, body:'#3a2f24', lens:'#cfd4da', grade:{contrast:1.1,warmth:1.5,feat:'Classic colour · all lenses'} },
+  { id:'lumix', name:'LUMIX',           cost:6000, desc:'Brilliant low-light performer. Wider exposure range.', perk:{dark:0.07,bright:0.06}, body:'#20242a', lens:'#8af', grade:{contrast:1.02,warmth:-1,feat:'Low-light hero · all lenses'} },
 ];
 function ownedCams(){ try{ return JSON.parse(lsGet('pm_owned_cam','["basic"]')); }catch(e){ return ['basic']; } }
 function equippedCam(){ const e=lsGet('pm_cam','basic'); return ownedCams().indexOf(e)>=0?e:'basic'; }
-function camObj(id){ return CAMERAS.find(c=>c.id===id)||CAMERAS[0]; }
+function camObj(id){ if(typeof CAMERAS==='undefined'||!CAMERAS) return {id:'basic',body:'#2b2f3a',lens:'#39c',grade:{contrast:1,warmth:0,feat:''},perk:{},cost:0,name:'STARTER'}; return CAMERAS.find(c=>c.id===id)||CAMERAS[0]; }
 function camPerk(){ const p=camObj(equippedCam()).perk||{}; return {sharp:p.sharp||0, color:p.color||0, dark:p.dark||0, bright:p.bright||0, mult:p.mult||1}; }
-// per-camera LOOK (base grade applied under the film look) + shooting features
-const CAM_GRADE = {
-  basic:{contrast:1.00, warmth:0,    feat:'Balanced digital · all lenses'},
-  canon:{contrast:1.03, warmth:2.5,  feat:'Warm colour science · all lenses'},
-  nikon:{contrast:1.08, warmth:0,    feat:'Crisp & punchy · all lenses'},
-  sony: {contrast:1.00, warmth:-1.5, feat:'Clean, cool · wide range · all lenses'},
-  leica:{contrast:1.22, warmth:0.5,  feat:'35mm prime only · higher contrast'},
-};
-function camGrade(){ return CAM_GRADE[equippedCam()] || CAM_GRADE.basic; }
+function camGrade(){ return camObj(equippedCam()).grade || {contrast:1,warmth:0,feat:''}; }
 function camLensLocked(){ return equippedCam()==='leica'; }
+
+/* ---- camera shops (unlock more as you earn trophies) ---- */
+const SHOPS = [
+  { id:0, name:'DOWNTOWN CAMERA', staff:'SAL',  tip:'Welcome in! Buy a body, grab some film — or take an assignment.',
+    cams:['basic','canon','nikon','sony','leica'], films:[1,2,3,4,5], need:0, staffColors:{skin:'#caa27a',hair:'#3a3a3a',apron:'#2e6b8a'} },
+  { id:1, name:'RETRO RELICS',    staff:'MABEL',tip:'Vintage glass and dreamy film, dearie. Earn your trophies!',
+    cams:['fuji','olympus','rollei'], films:[6,7,8], need:3, staffColors:{skin:'#e0b48a',hair:'#8a5a7a',apron:'#7a3a5a'} },
+  { id:2, name:'PRO GEAR CO.',    staff:'VIKTOR',tip:'Only the finest medium-format here. Prove you are worthy.',
+    cams:['hassel','phase','cinee'], films:[9,10], need:5, staffColors:{skin:'#c88a58',hair:'#1a1a1a',apron:'#1a3a2a'} },
+  { id:3, name:'STREET LAB',      staff:'JIN',  tip:'Compact, fast, street-ready. Keep shooting, keep leveling.',
+    cams:['ricoh','x100','lumix'], films:[11,12], need:7, staffColors:{skin:'#e8c49a',hair:'#101010',apron:'#3a3a8a'} },
+];
+function trophyCount(){ try{ return (typeof achGot==='function') ? achGot().length : 0; }catch(e){ return 0; } }
+function shopUnlocked(s){ return trophyCount() >= s.need; }
 // apply the equipped camera's shooting features to the live camera UI
 function applyCameraFeatures(){
   const locked = camLensLocked();
@@ -3051,17 +3097,18 @@ function refreshFilmUI(){
 /* ---- shop pixel scene: player (left) + counter + shopkeeper (right) ---- */
 var shopT=0, shopRAF=0;
 // animated shopkeeper: alternates between "talking" (head bob + mouth) and "adjusting a camera"
-function drawShopkeeper(c, x, y, t){
+function drawShopkeeper(c, x, y, t, col){
+  col = col || {skin:'#caa27a',hair:'#3a3a3a',apron:'#2e6b8a'};
   const br=Math.round(Math.sin(t*1.3)*1);
   const talking = (Math.sin(t*0.5) > 0);            // cycle talk / tinker every few seconds
   const mouthOpen = talking && (Math.sin(t*9) > 0);
   const fiddle = Math.round(Math.sin(t*4)*2);       // hands moving while adjusting
-  c.fillStyle='#caa27a'; c.fillRect(x+4,y+6+br,14,12);                    // head
-  c.fillStyle='#3a3a3a'; c.fillRect(x+2,y+2+br,18,5);                      // hair/cap
+  c.fillStyle=col.skin; c.fillRect(x+4,y+6+br,14,12);                     // head
+  c.fillStyle=col.hair; c.fillRect(x+2,y+2+br,18,5);                      // hair/cap
   c.fillStyle='#1a1a1a'; c.fillRect(x+5,y+11+br,5,2); c.fillRect(x+12,y+11+br,5,2); // glasses
   c.fillStyle='#6a4a2a'; c.fillRect(x+6,y+18+br,10,3);                     // beard
   c.fillStyle='#3a1a12'; if(mouthOpen) c.fillRect(x+9,y+15+br,4,2);        // open mouth (talking)
-  c.fillStyle='#2e6b8a'; c.fillRect(x,y+20+br,22,16);                      // apron/shirt
+  c.fillStyle=col.apron; c.fillRect(x,y+20+br,22,16);                     // apron/shirt
   c.fillStyle='#cfe8ff'; c.fillRect(x+8,y+20+br,6,10);                     // apron bib
   if(talking){
     c.fillStyle='#caa27a'; c.fillRect(x-2,y+22+br,4,10); c.fillRect(x+20,y+22+br,4,10); // arms resting
@@ -3097,8 +3144,10 @@ function drawShopScene(){
   // counter
   c.fillStyle='#2a1a0e'; c.fillRect(0,H-34,W,34);
   c.fillStyle='#6a4a2a'; c.fillRect(0,H-36,W,4);
-  // shopkeeper behind counter (right)
-  drawShopkeeper(c, W-70, H-78, shopT);
+  // shopkeeper behind counter (right) — colours vary per shop
+  const S=(typeof SHOPS!=='undefined')?SHOPS[curShop]:null;
+  drawShopkeeper(c, W-70, H-78, shopT, S&&S.staffColors);
+  if(S){ c.fillStyle='#ffe14d'; c.font='7px "Press Start 2P",monospace'; c.textAlign='right'; c.fillText(S.staff, W-6, 12); c.textAlign='left'; }
   // player (left), uses the selected character head/colours, with a gentle breathing bob
   const ch=(typeof currentChar==='function')?currentChar():{skin:'#e3b48a',hair:'#3a2a1a',hairStyle:'hat',shades:true};
   const px=28, py=H-74, br=Math.round(Math.sin(shopT+1)*1);
@@ -3111,25 +3160,38 @@ function drawShopScene(){
 function shopLoop(){ shopT+=0.08; drawShopScene(); shopRAF=requestAnimationFrame(shopLoop); }
 
 /* ---- shop tabs + list ---- */
-var shopTab='cam';
+var shopTab='cam', curShop=0;
 const SHOP_LINES = [
-  'Welcome in! Buy a body, grab some film — or take an assignment.',
-  'A Leica? Bold choice. Your wallet weeps, your scores soar.',
+  'Buy a body, grab some film — or take an assignment.',
+  'Better cameras pay bigger credit bonuses, you know.',
   'Film stocks change the whole mood. Try a few.',
   'Finish my assignments and I\'ll pay you well.',
-  'Tap me anytime for a tip, friend.'
+  'More trophies unlock more shops around town.'
 ];
 function shopSay(msg){ if(els.shopBubble) els.shopBubble.textContent=msg; }
+function renderShopSelector(){
+  if(!els.shopSel) return; els.shopSel.innerHTML='';
+  SHOPS.forEach(s=>{
+    const ok=shopUnlocked(s); const b=document.createElement('button');
+    b.className='ssh'+(s.id===curShop?' sel':'')+(ok?'':' lock');
+    b.textContent = ok ? s.name : ('🔒 '+s.need+'🏆');
+    b.onclick=()=>{ if(!ok){ shopSay('Earn '+s.need+' trophies to unlock '+s.name+'.'); return; } curShop=s.id; shopSay(s.tip); renderShop(); if(!state.muted){audio();beep(640,0.05,'square',0.05);} };
+    els.shopSel.appendChild(b);
+  });
+}
 function renderShop(){
   refreshCreditsUI();
+  const S=SHOPS[curShop]||SHOPS[0];
+  if(els.shopTitle) els.shopTitle.textContent=S.name;
+  renderShopSelector();
   document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('sel', b.dataset.tab===shopTab));
   renderAssignment();
   const list=els.shopList; list.innerHTML='';
   if(shopTab==='cam'){
     const own=ownedCams(), eq=equippedCam();
-    CAMERAS.forEach(cam=>{
+    S.cams.map(camObj).forEach(cam=>{
       const owned=own.indexOf(cam.id)>=0, equipped=(eq===cam.id);
-      const row=document.createElement('div'); row.className='shopitem'+(cam.id==='leica'?' gold':'');
+      const row=document.createElement('div'); row.className='shopitem'+(cam.cost>=9000?' gold':'');
       const cv=document.createElement('canvas'); cv.width=34; cv.height=34; const g=cv.getContext('2d');
       g.imageSmoothingEnabled=false; g.fillStyle='#0a0a1e'; g.fillRect(0,0,34,34);
       g.fillStyle=cam.body; g.fillRect(6,12,22,14); g.fillStyle='#111'; g.fillRect(13,8,8,5);
@@ -3147,12 +3209,13 @@ function renderShop(){
     });
   } else {
     const own=ownedFilm();
-    FILM_STOCKS.forEach(fs=>{
+    S.films.forEach(look=>{
+      const fs=FILM_STOCKS.find(f=>f.look===look); if(!fs) return;
       const L=LOOKS[fs.look], owned=own.indexOf(fs.look)>=0;
       const row=document.createElement('div'); row.className='shopitem';
       const cv=document.createElement('canvas'); cv.width=34; cv.height=34; const g=cv.getContext('2d');
       g.imageSmoothingEnabled=false; g.fillStyle='#120a06'; g.fillRect(0,0,34,34);
-      g.fillStyle='#d9c27a'; g.fillRect(8,4,18,26); g.fillStyle='#2a1a0e'; g.fillRect(8,4,18,4); g.fillStyle='#b23a2a'; g.fillRect(12,10,10,14); // film canister
+      g.fillStyle='#d9c27a'; g.fillRect(8,4,18,26); g.fillStyle='#2a1a0e'; g.fillRect(8,4,18,4); g.fillStyle='#b23a2a'; g.fillRect(12,10,10,14);
       row.appendChild(cv);
       const info=document.createElement('div'); info.className='info';
       info.innerHTML='<div class="nm">'+L.name+'  🪙'+fs.cost.toLocaleString()+'</div><div class="ds">Film stock · tag '+L.tag+'</div>';
@@ -3166,40 +3229,124 @@ function renderShop(){
   }
 }
 
-/* ---- assignments (owner-given jobs for credits) ---- */
+/* ---- better cameras earn more credits ---- */
+function camCreditMult(){ return ({basic:1, canon:1.15, nikon:1.3, sony:1.5, leica:2.0})[equippedCam()] || 1; }
+
+/* ---- subject detection: real ML (COCO-SSD) when online, heuristics as fallback ---- */
+var cocoModel=null, cocoLoading=null;
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+async function ensureCoco(){
+  if(cocoModel) return cocoModel;
+  if(cocoLoading) return cocoLoading;
+  cocoLoading=(async()=>{
+    try{
+      if(typeof cocoSsd==='undefined'){
+        if(typeof tf==='undefined') await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+        await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js');
+      }
+      cocoModel=await cocoSsd.load({base:'lite_mobilenet_v2'});
+      return cocoModel;
+    }catch(e){ return null; }
+  })();
+  return cocoLoading;
+}
+const COCO_MAP={ dog:['dog'], cat:['cat'], person:['person'], tree:['potted plant'],
+  street:['car','bus','truck','traffic light','bicycle','motorcycle','fire hydrant','stop sign','parking meter'],
+  nature:['potted plant','bird','cow','horse','sheep','elephant','zebra','giraffe','bear'] };
+function _imgData(cv){ return cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data; }
+function greenness(cv){ const d=_imgData(cv); let g=0; const n=d.length/4; for(let i=0;i<d.length;i+=4){ if(d[i+1]>d[i]+12 && d[i+1]>d[i+2]+10) g++; } return g/n; }
+function skinFrac(cv){ const d=_imgData(cv); let s=0; const n=d.length/4; for(let i=0;i<d.length;i+=4){ const r=d[i],g=d[i+1],b=d[i+2]; if(r>95&&g>40&&b>20&&r>g&&r>b&&(r-Math.min(g,b))>15) s++; } return s/n; }
+function edgeStats(cv){ const W=cv.width,H=cv.height,d=_imgData(cv); const gy=i=>0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+  let hor=0,ver=0,diag=0,cen=0,tot=0;
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){ const i=(y*W+x)*4; const gx=gy(i+4)-gy(i-4), gyy=gy(i+W*4)-gy(i-W*4); const mag=Math.abs(gx)+Math.abs(gyy); if(mag<38)continue; tot++;
+    if(Math.abs(gx)>2.2*Math.abs(gyy)) ver++; else if(Math.abs(gyy)>2.2*Math.abs(gx)) hor++; else diag++;
+    if(x>W*0.28&&x<W*0.72&&y>H*0.18&&y<H*0.85) cen++; }
+  const t=tot||1; return {hor:hor/t, ver:ver/t, diag:diag/t, center:cen/t, density:tot/(W*H)}; }
+function heuristicSubject(cv, want){
+  if(want==='tree'||want==='nature') return greenness(cv)>0.17;
+  if(want==='person') return skinFrac(cv)>0.04;
+  if(want==='street'){ const e=edgeStats(cv); return (e.hor+e.ver)>0.58 && greenness(cv)<0.12 && e.density>0.02; }
+  if(want==='dog'||want==='cat'){ const e=edgeStats(cv); return e.center>0.5 && e.density>0.02; }  // best-effort offline
+  return false;
+}
+function heuristicShape(cv, want){ const e=edgeStats(cv);
+  if(want==='rectangle'||want==='square') return (e.hor+e.ver)>0.55 && e.density>0.008;
+  if(want==='triangle') return e.diag>0.4 && e.density>0.008;
+  return false;
+}
+async function detectSubject(cv, want){
+  const isShape=(want==='rectangle'||want==='square'||want==='triangle');
+  if(isShape) return heuristicShape(cv, want);
+  const model=await ensureCoco();
+  if(model){
+    try{
+      const preds=await model.detect(cv, 10, 0.4); const cls=preds.map(p=>p.class);
+      const wanted=COCO_MAP[want]||[want];
+      if(want==='street'){ if(cls.some(c=>wanted.includes(c))) return true; if(cls.filter(c=>c==='person').length>=2) return true; }
+      else if(cls.some(c=>wanted.includes(c))) return true;
+      if(want==='nature' && greenness(cv)>0.2) return true;     // trees/foliage COCO may miss
+      if(want==='tree' && greenness(cv)>0.28) return true;
+      return false;
+    }catch(e){}
+  }
+  return heuristicSubject(cv, want);   // offline
+}
+
+/* ---- assignments: ordered EASY → HARD, rewards grow with difficulty ---- */
 const ASSIGNMENTS = [
-  { id:'a_gold', name:'Golden Hour', desc:'Land 2 golden-ratio shots in one round.', need:2, reward:800, scope:'shot', test:r=>r.goldenHit },
-  { id:'a_color',name:'Colour Pop',  desc:'Capture 5 vivid-colour shots.',          need:5, reward:700, scope:'shot', test:r=>r.colorful>0.33 },
-  { id:'a_red',  name:'Seeing Red',  desc:'Shoot 3 strongly RED frames.',            need:3, reward:700, scope:'shot', test:r=>r.redness>0.12 },
-  { id:'a_sharp',name:'Razor Focus', desc:'Take 6 tack-sharp shots.',                need:6, reward:800, scope:'shot', test:r=>r.lapVar>=120 },
-  { id:'a_perf', name:'Perfectionist',desc:'Nail 1 PERFECT shot.',                   need:1, reward:1500,scope:'shot', test:r=>r.perfect },
-  { id:'a_srank',name:'Top Marks',   desc:'Finish a round at S-rank.',               need:1, reward:1200,scope:'round',test:(t,rk)=>rk==='S' },
-  { id:'a_big',  name:'Big Numbers', desc:'Score 18,000+ in a single round.',        need:1, reward:1000,scope:'round',test:(t)=>t>=18000 },
-  { id:'a_thirds',name:'Thirds Pro', desc:'Hit all 4 thirds dots in one shot.',      need:1, reward:1000,scope:'shot', test:r=>r.dotsHit>=4 },
+  // Tier 1 — warm-up (20–40)
+  {id:'t_shots3', name:'Warm Up',          desc:'Take any 3 photos.',                  need:3, reward:20,  scope:'shot',   test:r=>true },
+  {id:'t_focus2', name:'Steady Hands',     desc:'Take 2 in-focus shots.',              need:2, reward:25,  scope:'shot',   test:r=>r.lapVar>=SCORE.focus },
+  {id:'t_level2', name:'Keep It Level',    desc:'Take 2 perfectly level shots.',       need:2, reward:30,  scope:'shot',   test:r=>r.pos&&r.pos.some(p=>p[0]==='Level') },
+  {id:'t_color2', name:'A Dash of Colour', desc:'Capture 2 vivid-colour shots.',       need:2, reward:35,  scope:'shot',   test:r=>r.colorful>0.33 },
+  {id:'t_thirds1',name:'On the Grid',      desc:'Hit a rule-of-thirds dot once.',      need:1, reward:40,  scope:'shot',   test:r=>r.dotsHit>=1 },
+  // Tier 2 — getting serious (60–120)
+  {id:'t_sharp4', name:'Tack Sharp',       desc:'Take 4 tack-sharp shots.',            need:4, reward:70,  scope:'shot',   test:r=>r.lapVar>=120 },
+  {id:'t_thirds3',name:'Composed',         desc:'Hit 3 thirds dots in one shot.',      need:1, reward:90,  scope:'shot',   test:r=>r.dotsHit>=3 },
+  {id:'t_big1500',name:'Nice Frame',       desc:'Score 1,500+ on a single shot.',      need:1, reward:110, scope:'shot',   test:r=>r.total>=1500 },
+  {id:'t_tree',   name:'Branch Out',       desc:'Photograph a tree or plant.',         need:1, reward:120, scope:'subject',want:'tree' },
+  // Tier 3 — pro jobs (150–300)
+  {id:'t_person', name:'Portrait Gig',     desc:'Photograph a person.',                need:1, reward:200, scope:'subject',want:'person' },
+  {id:'t_square', name:'Right Angles',     desc:'Photograph a square or rectangular object.', need:1, reward:230, scope:'subject',want:'rectangle' },
+  {id:'t_gold2',  name:'Golden Touch',     desc:'Land 2 golden-ratio shots.',          need:2, reward:260, scope:'shot',   test:r=>r.goldenHit },
+  {id:'t_round10',name:'Solid Session',    desc:'Score 10,000+ in a round.',           need:1, reward:300, scope:'round',  test:(t)=>t>=10000 },
+  // Tier 4 — specialist (400–700)
+  {id:'t_dog',    name:'Good Boy',         desc:'Photograph a dog.',                   need:1, reward:400, scope:'subject',want:'dog' },
+  {id:'t_cat',    name:'Here, Kitty',      desc:'Photograph a cat.',                   need:1, reward:420, scope:'subject',want:'cat' },
+  {id:'t_nature', name:'Into the Wild',    desc:'Capture a lush nature scene.',        need:1, reward:520, scope:'subject',want:'nature' },
+  {id:'t_perfect',name:'Perfectionist',    desc:'Nail one PERFECT shot.',              need:1, reward:650, scope:'shot',   test:r=>r.perfect },
+  // Tier 5 — elite (800–1500)
+  {id:'t_street', name:'Street Beat',      desc:'Shoot a busy street scene.',          need:1, reward:850, scope:'subject',want:'street' },
+  {id:'t_srank',  name:'Top Marks',        desc:'Finish a round at S-rank.',           need:1, reward:950, scope:'round',  test:(t,rk)=>rk==='S' },
+  {id:'t_tri',    name:'Three Sides',      desc:'Photograph a triangular object.',     need:1, reward:1100,scope:'subject',want:'triangle' },
+  {id:'t_round20',name:'Big Numbers',      desc:'Score 20,000+ in a round.',           need:1, reward:1500,scope:'round',  test:(t)=>t>=20000 },
 ];
+function assignDone(){ return parseInt(lsGet('pm_assign_done','0'),10)||0; }
+function payout(A){ return Math.round(A.reward * camCreditMult()); }   // camera bonus baked in
 function getAssign(){ try{ return JSON.parse(lsGet('pm_assign','null')); }catch(e){ return null; } }
 function setAssign(a){ lsSet('pm_assign', a?JSON.stringify(a):''); }
-function offerAssign(){ // returns the id currently offered (rotates when none active/offered)
+function offerAssign(){
   let off=lsGet('pm_assign_offer','');
-  if(!off){ off=ASSIGNMENTS[(Math.random()*ASSIGNMENTS.length)|0].id; lsSet('pm_assign_offer',off); }
-  return off;
+  if(off && ASSIGNMENTS.find(x=>x.id===off)) return off;
+  const unlocked=Math.min(ASSIGNMENTS.length, 4 + assignDone());   // first 4 jobs, then more as you finish
+  off=ASSIGNMENTS[(Math.random()*unlocked)|0].id; lsSet('pm_assign_offer',off); return off;
 }
 function renderAssignment(){
   const box=els.assignBox; if(!box) return;
   const active=getAssign();
   if(active){
-    const A=ASSIGNMENTS.find(x=>x.id===active.id);
+    const A=ASSIGNMENTS.find(x=>x.id===active.id); if(!A){ setAssign(null); return renderAssignment(); }
     box.innerHTML='<div class="at">◆ ASSIGNMENT: '+A.name+'</div><div class="ad">'+A.desc+'</div>'
       +'<div class="prog">Progress: '+Math.min(active.prog,A.need)+'/'+A.need+'</div>'
-      +'<div class="arew">Reward: 🪙'+A.reward.toLocaleString()+'</div>'
+      +'<div class="arew">Reward: 🪙'+payout(A).toLocaleString()+(camCreditMult()>1?'  (camera bonus ×'+camCreditMult()+')':'')+'</div>'
       +'<button id="assignDrop">ABANDON</button>';
     document.getElementById('assignDrop').onclick=()=>{ setAssign(null); lsSet('pm_assign_offer',''); shopSay('No worries. Here\'s another when you\'re ready.'); renderShop(); };
   } else {
     const A=ASSIGNMENTS.find(x=>x.id===offerAssign())||ASSIGNMENTS[0];
     box.innerHTML='<div class="at">◆ NEW ASSIGNMENT: '+A.name+'</div><div class="ad">'+A.desc+'</div>'
-      +'<div class="arew">Reward: 🪙'+A.reward.toLocaleString()+'</div>'
+      +'<div class="arew">Reward: 🪙'+payout(A).toLocaleString()+(camCreditMult()>1?'  (camera bonus ×'+camCreditMult()+')':'')+'</div>'
       +'<button id="assignTake">ACCEPT JOB</button>';
-    document.getElementById('assignTake').onclick=()=>{ setAssign({id:A.id, prog:0}); shopSay('Great! Complete it in your next rounds for '+A.reward+' credits.'); renderShop(); if(!state.muted){audio();beep(700,0.07,'square',0.05);} };
+    document.getElementById('assignTake').onclick=()=>{ setAssign({id:A.id, prog:0}); shopSay('Great! Complete it for 🪙'+payout(A)+'.'); renderShop(); if(!state.muted){audio();beep(700,0.07,'square',0.05);} };
   }
 }
 function assignOnShot(res){
@@ -3211,15 +3358,30 @@ function assignOnRound(total, rank){
   const a=getAssign(); if(!a) return; const A=ASSIGNMENTS.find(x=>x.id===a.id); if(!A||A.scope!=='round') return;
   if(A.test(total, rank)){ a.prog=A.need; setAssign(a); completeAssign(A); }
 }
+// subject assignments (dog/cat/tree/person/street/shapes/nature) — checked from the captured frame
+function checkSubjectShot(src){
+  const a=getAssign(); if(!a) return; const A=ASSIGNMENTS.find(x=>x.id===a.id); if(!A||A.scope!=='subject') return;
+  if(a._busy) return; a._busy=true;
+  const W=320, H=Math.max(1,Math.round(W*src.height/src.width));
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  try{ cv.getContext('2d').drawImage(src,0,0,W,H); }catch(e){ a._busy=false; return; }
+  toast('Checking: '+A.want.toUpperCase()+'…');
+  detectSubject(cv, A.want).then(hit=>{ a._busy=false;
+    if(hit){ a.prog=A.need; setAssign(a); completeAssign(A); }
+    else toast('No '+A.want.toUpperCase()+' detected — try again');
+  }).catch(()=>{ a._busy=false; });
+}
 function completeAssign(A){
-  addCredits(A.reward); setAssign(null); lsSet('pm_assign_offer','');
-  if(typeof unlockAch==='function'){} // (no specific trophy)
-  toast('🪙 ASSIGNMENT DONE +'+A.reward); if(!state.muted){ audio(); [660,880,1320].forEach((f,i)=>beep(f,0.12,'square',0.06,i*0.09)); }
+  const pay=payout(A);
+  addCredits(pay); setAssign(null); lsSet('pm_assign_offer','');
+  lsSet('pm_assign_done', assignDone()+1);
+  if(typeof unlockAch==='function') unlockAch('daily');   // "Daily Grind" trophy also covers assignments
+  toast('🪙 ASSIGNMENT DONE +'+pay); if(!state.muted){ audio(); [660,880,1320].forEach((f,i)=>beep(f,0.12,'square',0.06,i*0.09)); }
 }
 
-/* ---- credits earned per round ---- */
+/* ---- credits earned per round (modest — you earn it) + camera bonus ---- */
 function pmAwardCredits(total, rank){
-  const earned = Math.max(20, Math.round(total/12));
+  const earned = Math.max(8, Math.round(total/90 * camCreditMult()));
   addCredits(earned);
   const base = els.resXP ? els.resXP.textContent : '';
   if(els.resXP) els.resXP.textContent = base + '  ·  🪙 +'+earned.toLocaleString();
@@ -3261,8 +3423,10 @@ function applyOrientationFlip(){
   let ang = 0;
   try{ ang = (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
             : (typeof window.orientation==='number' ? window.orientation : 0); }catch(e){}
-  // one landscape direction (angle 90) puts controls on the left for left-handed shooting
-  els.stage && els.stage.classList.toggle('lh', ang===90);
+  // flip controls to match how the phone is rotated:
+  //   rotated right (angle 270 / -90) → shutter on the LEFT
+  //   rotated left  (angle 90)        → shutter on the RIGHT (default layout)
+  els.stage && els.stage.classList.toggle('lh', ang===270 || ang===-90);
 }
 window.addEventListener('orientationchange', ()=>setTimeout(applyOrientationFlip,200));
 window.addEventListener('resize', applyOrientationFlip);
@@ -3274,10 +3438,10 @@ refreshCreditsUI(); refreshFilmUI();
    HOME / LOADOUT hub — big animated character, pick camera & film, trophies
    ======================================================================= */
 var homePose='wave', homeT=0, homeRAF=0, homeNext=0, homeReturn='opening';
-const HOME_POSES=['wave','dance','swat','adjust','idle'];
+const HOME_POSES=['wave','look','playcam','dance','look','adjust','playcam','idle'];
 function homeLoop(){
-  homeT+=0.09; const now=performance.now();
-  if(now>homeNext){ homePose=HOME_POSES[(Math.random()*HOME_POSES.length)|0]; homeNext=now+2200+Math.random()*2200; }
+  homeT+=0.045; const now=performance.now();   // calmer, slower idle animation
+  if(now>homeNext){ homePose=HOME_POSES[(Math.random()*HOME_POSES.length)|0]; homeNext=now+3200+Math.random()*2600; }
   const c=els.homeChar && els.homeChar.getContext('2d');
   if(c) drawFigure(c, homePose, homeT, 0, currentChar());
   homeRAF=requestAnimationFrame(homeLoop);
