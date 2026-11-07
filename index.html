@@ -651,6 +651,7 @@
       <button id="peakBtn">PEAK</button>
       <button id="scoreBtn">SCORE</button>
       <button id="mapBtn">MAP</button>
+      <button id="homeCamBtn">🏠 HOME</button>
       <button id="boardBtn">BOARD</button>
       <button id="sndBtn">SND</button>
     </div>
@@ -1521,7 +1522,7 @@ const els = {
   lookReadCell:el('lookReadCell'), stage:el('stage'),
   homeBtn:el('homeBtn'), resHome:el('resHome'), home:el('home'), homeChar:el('homeChar'), homeName:el('homeName'),
   homeAch:el('homeAch'), homeCam:el('homeCam'), homeFeat:el('homeFeat'), homeBag:el('homeBag'),
-  homeShoot:el('homeShoot'), homeShop:el('homeShop'), homeBack:el('homeBack'),
+  homeShoot:el('homeShoot'), homeShop:el('homeShop'), homeBack:el('homeBack'), homeCamBtn:el('homeCamBtn'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
@@ -3493,11 +3494,17 @@ function openHome(from){
 function closeHome(){ els.home.classList.remove('on'); cancelAnimationFrame(homeRAF); }
 els.homeBtn && els.homeBtn.addEventListener('click', ()=>{ audio(); openHome('opening'); });
 els.resHome && els.resHome.addEventListener('click', ()=>{ if(typeof commitRound==='function') commitRound(); if(typeof stopFireworks==='function') stopFireworks(); openHome('results'); });
+els.homeCamBtn && els.homeCamBtn.addEventListener('click', ()=>{ audio(); openHome('camera'); });  // jump to loadout mid-shoot
+// apply any gear changes made in the loadout to the live camera
+function applyGearLive(){ refreshFilmUI(); if(typeof applyCameraFeatures==='function') applyCameraFeatures(); if(typeof syncLook==='function') syncLook(); if(typeof drawBarMap==='function') drawBarMap(); }
 els.homeBack && els.homeBack.addEventListener('click', ()=>{ closeHome();
-  if(homeReturn==='results'){ els.results.classList.add('open'); } else { els.overlay.style.display='flex'; } });
+  if(homeReturn==='camera'){ applyGearLive(); }                       // back to the live camera with new gear
+  else if(homeReturn==='results'){ els.results.classList.add('open'); }
+  else { els.overlay.style.display='flex'; } });
 els.homeShop && els.homeShop.addEventListener('click', ()=>{ closeHome(); if(typeof openShop==='function') openShop(homeReturn); });
 els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   closeHome(); refreshFilmUI();
+  if(homeReturn==='camera'){ applyGearLive(); return; }               // already shooting — just resume with new gear
   if(typeof cameraStarted!=='undefined' && cameraStarted){
     els.results.classList.remove('open');
     state.scoreMode=true; els.scoreBtn.classList.add('on');
