@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
   :root{
     --bg:#000; --panel:rgba(0,0,0,.46); --line:rgba(255,255,255,.16);
@@ -20,6 +21,7 @@
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sys:-apple-system,system-ui,"Helvetica Neue",sans-serif;
     --display:'Jost','Helvetica Neue',Arial,sans-serif; /* clean geometric wordmark */
+    --pixel:'Press Start 2P','Courier New',monospace;    /* retro arcade */
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0}
@@ -134,6 +136,39 @@
   .shutter.recording .core{border-radius:8px; width:28px; height:28px}
   .sheet video{flex:1; width:100%; min-height:0; background:#000}
 
+  /* retro arcade score card */
+  .scorebox{font-family:var(--pixel); color:#fff; padding:12px 16px 4px; max-height:46vh; overflow-y:auto;
+    position:relative; background:
+      repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.18) 2px 3px),  /* scanlines */
+      linear-gradient(180deg,#120a2e,#0a0a1e)}
+  .scorebox .lvl{font-size:9px; letter-spacing:1px; color:#36e0ff; text-align:center; text-shadow:0 0 6px #36e0ff88}
+  .scorebox .thumb{display:block; margin:8px auto 4px; width:150px; image-rendering:pixelated;
+    border:3px solid #36e0ff; box-shadow:0 0 0 3px #0a0a1e, 0 0 14px #36e0ff55}
+  .scorebox .totrow{display:flex; align-items:baseline; justify-content:center; gap:10px; margin:6px 0 2px}
+  .scorebox .tot{font-size:30px; color:#ffe14d; text-shadow:3px 3px 0 #b33, 0 0 10px #ffe14d66}
+  .scorebox .rank{font-size:26px; color:#36d07a; text-shadow:2px 2px 0 #063}
+  .scorebox .rank.s{color:#ff5df2; text-shadow:2px 2px 0 #60065a} .scorebox .rank.a{color:#ffe14d; text-shadow:2px 2px 0 #665200}
+  .scorebox .best, .scorebox .sess{font-size:8px; letter-spacing:1px; text-align:center; color:#9aa}
+  .scorebox .best{color:#ffb34d} .scorebox .sess{color:#8f7dff; margin-bottom:6px}
+  .scorebox ul{list-style:none; margin:8px 0 2px; padding:0; display:flex; flex-direction:column; gap:5px}
+  .scorebox li{display:flex; justify-content:space-between; font-size:9px; line-height:1.4}
+  .scorebox li.good .pts{color:#5bff9d} .scorebox li.good span:first-child{color:#bfe}
+  .scorebox li.bad .pts{color:#ff6b6b}  .scorebox li.bad span:first-child{color:#fcc}
+
+  /* high-score board overlay */
+  .board{position:absolute; inset:0; z-index:7; display:none; flex-direction:column;
+    background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.2) 2px 3px), linear-gradient(180deg,#1a0b3a,#07071a);
+    font-family:var(--pixel); color:#fff; padding:calc(env(safe-area-inset-top) + 20px) 18px calc(env(safe-area-inset-bottom) + 18px)}
+  .board.open{display:flex}
+  .board h2{font-size:14px; color:#ffe14d; text-align:center; text-shadow:3px 3px 0 #b33; margin:4px 0 2px; letter-spacing:1px}
+  .board .sub{font-size:8px; color:#36e0ff; text-align:center; margin-bottom:14px; letter-spacing:1px}
+  .board .list{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:9px}
+  .board .row{display:flex; justify-content:space-between; font-size:10px; color:#cfe}
+  .board .row .b{color:#ffe14d}
+  .board .empty{font-size:9px; color:#9aa; text-align:center; margin-top:30px; line-height:1.8}
+  .board .close{all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:10px; color:#07071a;
+    background:#36e0ff; padding:12px; margin-top:14px; box-shadow:4px 4px 0 #0b6; }
+
   /* AE/AF locked badge */
   .lockbadge{position:absolute; top:calc(env(safe-area-inset-top) + 46px);
     right:max(18px,env(safe-area-inset-right)); display:none;
@@ -242,6 +277,8 @@
       <button id="lockBtn">AE-L</button>
       <button id="levelBtn">LEVEL</button>
       <button id="peakBtn">PEAK</button>
+      <button id="scoreBtn">SCORE</button>
+      <button id="boardBtn">BOARD</button>
     </div>
     <div class="look" id="lookTag">CLASSIC</div>
   </div>
@@ -352,11 +389,19 @@
 <div class="sheet" id="sheet">
   <img id="shot" alt="Captured photo">
   <video id="shotVid" playsinline controls hidden></video>
+  <div class="scorebox" id="scoreBox" hidden></div>
   <div class="hint" id="sheetHint">Tap Save to send it to Photos.</div>
   <div class="sbar">
     <button class="back" id="backBtn">BACK</button>
     <button class="save" id="saveBtn">SAVE</button>
   </div>
+</div>
+
+<div class="board" id="board">
+  <h2>HIGH SCORES</h2>
+  <div class="sub" id="boardSession">SESSION 0</div>
+  <div class="list" id="boardList"></div>
+  <button class="close" id="boardClose">BACK TO CAMERA</button>
 </div>
 
 <div class="overlay" id="overlay">
@@ -415,8 +460,161 @@ const state = {
   contrast:1.0, saturation:1.0, soften:0.0,  // color tools + de-sharpen
   peaking:false,           // focus peaking overlay (preview only)
   imgFormat:'jpeg',        // 'jpeg' | 'png'
-  quality:0.95             // JPEG quality
+  quality:0.95,            // JPEG quality
+  scoreMode:false          // Pokémon Snap-style photo scoring
 };
+
+/* ---------- photo scoring (Snap-style) ---------- */
+const SCORE = {
+  start: 1000, up: 200, down: 300,
+  blur: 14, focus: 26, sharp: 90,     // Laplacian-variance thresholds
+  dark: 0.20, bright: 0.82,           // mean-luminance bounds
+  motion: 2.2,                        // device accel delta (m/s^2) = "in motion"
+  thirds: 0.11, golden: 0.09          // distance tolerance to a target point (normalized)
+};
+let motionMag = 0, lastPos = null, geoWatchId = null, lastScore = null;
+let sessionTotal = 0, shotCount = 0;
+function rankFor(t){ return t>=1800?['S','s']: t>=1600?['A','a']: t>=1400?['B','']: t>=1200?['C','']: ['D','']; }
+
+// rolling device-motion magnitude (for the "in motion" rule)
+function onMotion(e){
+  const a = e.accelerationIncludingGravity || e.acceleration;
+  if(!a) return;
+  const m = Math.abs(a.x||0) + Math.abs(a.y||0) + Math.abs(a.z||0);
+  // high-pass: deviation from the ~9.8 gravity baseline
+  motionMag = Math.abs(m - 9.8) * 0.4 + motionMag * 0.6;
+}
+
+// turn a GPS fix into a repeatable "Level" (grid cell, numbered in discovery order)
+function levelForPosition(pos){
+  let store;
+  try{ store = JSON.parse(localStorage.getItem('mcam_levels')||'{}'); }catch(e){ store={}; }
+  if(!store.cells) store = { cells:{}, next:1 };
+  if(!pos){ return { name:'Level —', key:null, best:0, store }; }
+  // ~0.0007 deg ≈ 70–80m grid cell = "same general location"
+  const key = pos.lat.toFixed(3) + ',' + pos.lng.toFixed(3);
+  if(!store.cells[key]) store.cells[key] = { num: store.next++, best: 0 };
+  const cell = store.cells[key];
+  return { name:'Level ' + cell.num, key, best: cell.best||0, store };
+}
+function saveLevelBest(res){
+  if(!res.levelKey) return;
+  try{
+    const store = res.levelStore;
+    const cell = store.cells[res.levelKey];
+    if(cell && res.total > (cell.best||0)){ cell.best = res.total; }
+    localStorage.setItem('mcam_levels', JSON.stringify(store));
+  }catch(e){}
+}
+
+// analyze a rendered photo canvas -> score result
+function computeScore(canvas){
+  const W = 220, ar = canvas.height/canvas.width, H = Math.max(1, Math.round(W*ar));
+  const a = document.createElement('canvas'); a.width=W; a.height=H;
+  const ctx = a.getContext('2d'); ctx.drawImage(canvas, 0, 0, W, H);
+  const d = ctx.getImageData(0,0,W,H).data;
+  const n = W*H;
+  const gray = new Float32Array(n);
+  let lumSum = 0;
+  for(let i=0;i<n;i++){
+    const r=d[i*4], g=d[i*4+1], b=d[i*4+2];
+    const y = (0.299*r + 0.587*g + 0.114*b)/255;
+    gray[i] = y; lumSum += y;
+  }
+  const brightness = lumSum/n;
+  // Laplacian variance = sharpness/focus
+  let lsum=0, lsq=0, cnt=0;
+  const at=(x,y)=>gray[y*W+x];
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    const lap = 4*at(x,y) - at(x-1,y) - at(x+1,y) - at(x,y-1) - at(x,y+1);
+    lsum+=lap; lsq+=lap*lap; cnt++;
+  }
+  const mean=lsum/cnt; const lapVar=(lsq/cnt - mean*mean) * 10000; // scale to a friendly range
+  // Sobel saliency centroid = where the "subject" (most detail) is
+  let wx=0, wy=0, wsum=0;
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    const gx = at(x+1,y)-at(x-1,y), gy = at(x,y+1)-at(x,y-1);
+    const mag = Math.abs(gx)+Math.abs(gy);
+    wx += mag*x; wy += mag*y; wsum += mag;
+  }
+  const cx = wsum? (wx/wsum)/W : 0.5, cy = wsum? (wy/wsum)/H : 0.5;
+  const nearest = (v, pts)=>Math.min(...pts.map(p=>Math.abs(v-p)));
+  const dThirds = Math.hypot(nearest(cx,[1/3,2/3]), nearest(cy,[1/3,2/3]));
+  const dGolden = Math.hypot(nearest(cx,[0.382,0.618]), nearest(cy,[0.382,0.618]));
+  const onThirds = dThirds < SCORE.thirds, onGolden = dGolden < SCORE.golden;
+
+  // build a marker thumbnail: photo + thirds grid + golden points + subject dot
+  const tw = 300, th = Math.round(tw*ar);
+  const t = document.createElement('canvas'); t.width=tw; t.height=th;
+  const tc = t.getContext('2d'); tc.drawImage(a, 0, 0, tw, th);
+  tc.lineWidth = 2; tc.strokeStyle = 'rgba(255,255,255,0.55)';
+  [1/3,2/3].forEach(f=>{ tc.beginPath(); tc.moveTo(f*tw,0); tc.lineTo(f*tw,th); tc.stroke();
+    tc.beginPath(); tc.moveTo(0,f*th); tc.lineTo(tw,f*th); tc.stroke(); });
+  tc.fillStyle = '#ffe14d';   // golden-ratio targets
+  [0.382,0.618].forEach(fx=>[0.382,0.618].forEach(fy=>{ tc.beginPath(); tc.arc(fx*tw,fy*th,4,0,7); tc.fill(); }));
+  tc.fillStyle = (onThirds||onGolden) ? '#36ff8a' : '#ff5b5b';  // detected subject
+  tc.beginPath(); tc.arc(cx*tw, cy*th, 8, 0, 7); tc.fill();
+  tc.strokeStyle = '#000'; tc.lineWidth = 2; tc.beginPath(); tc.arc(cx*tw, cy*th, 8, 0, 7); tc.stroke();
+  const thumbURL = t.toDataURL('image/png');
+
+  const pos=[], neg=[];
+  // focus / sharp / blur
+  if(lapVar < SCORE.blur){ neg.push(['Blurry', -SCORE.down]); }
+  else { if(lapVar >= SCORE.focus) pos.push(['In focus', SCORE.up]);
+         if(lapVar >= SCORE.sharp) pos.push(['Sharp', SCORE.up]); }
+  // motion
+  if(motionMag > SCORE.motion) neg.push(['In motion', -SCORE.down]);
+  // exposure
+  if(brightness < SCORE.dark) neg.push(['Too dark', -SCORE.down]);
+  else if(brightness > SCORE.bright) neg.push(['Too bright', -SCORE.down]);
+  // rule of thirds
+  if(dThirds < SCORE.thirds) pos.push(['Rule of thirds', SCORE.up]);
+  else neg.push(['Off thirds', -SCORE.down]);
+  // golden ratio
+  if(dGolden < SCORE.golden) pos.push(['Golden ratio', SCORE.up]);
+  else neg.push(['Off golden ratio', -SCORE.down]);
+
+  let total = SCORE.start;
+  pos.forEach(p=>total+=p[1]); neg.forEach(p=>total+=p[1]);
+  const lvl = levelForPosition(lastPos);
+  const res = { total, pos, neg, levelName:lvl.name, levelBest:lvl.best,
+                levelKey:lvl.key, levelStore:lvl.store, thumbURL };
+  saveLevelBest(res);
+  res.levelBest = Math.max(res.levelBest, total);
+  return res;
+}
+
+function renderScore(res){
+  sessionTotal += res.total; shotCount++;
+  const [rank, rcls] = rankFor(res.total);
+  const rows = res.pos.map(p=>`<li class="good"><span>${p[0]}</span><span class="pts">+${p[1]}</span></li>`)
+    .concat(res.neg.map(p=>`<li class="bad"><span>${p[0]}</span><span class="pts">${p[1]}</span></li>`)).join('');
+  els.scoreBox.innerHTML =
+    `<div class="lvl">${res.levelName}</div>`
+    + `<img class="thumb" src="${res.thumbURL}" alt="shot analysis">`
+    + `<div class="totrow"><span class="tot" id="totNum">0</span><span class="rank ${rcls}">${rank}</span></div>`
+    + `<div class="best">BEST HERE ${res.levelBest}</div>`
+    + `<div class="sess">SESSION ${sessionTotal} · SHOT ${shotCount}</div>`
+    + `<ul><li class="good"><span>Base</span><span class="pts">+1000</span></li>${rows}</ul>`;
+  els.scoreBox.hidden = false;
+  // count-up animation on the total
+  const num = document.getElementById('totNum'); let v = 0;
+  const step = Math.max(20, Math.round(res.total/28));
+  clearInterval(renderScore._t);
+  renderScore._t = setInterval(()=>{ v = Math.min(res.total, v+step);
+    if(num) num.textContent = v; if(v>=res.total) clearInterval(renderScore._t); }, 24);
+}
+
+function openBoard(){
+  let store; try{ store = JSON.parse(localStorage.getItem('mcam_levels')||'{}'); }catch(e){ store={}; }
+  const cells = (store && store.cells) ? Object.values(store.cells) : [];
+  cells.sort((a,b)=>a.num-b.num);
+  els.boardSession.textContent = 'SESSION ' + sessionTotal + (shotCount?(' · '+shotCount+' SHOTS'):'');
+  els.boardList.innerHTML = cells.length
+    ? cells.map(c=>`<div class="row"><span>LVL ${c.num}</span><span class="b">${c.best||0}</span></div>`).join('')
+    : '<div class="empty">No levels yet.<br>Turn on SCORE and<br>take some photos!</div>';
+  els.board.classList.add('open');
+}
 const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
 const ZOOM_MAX = 6;
 const TIMERS = [0, 3, 10];
@@ -438,7 +636,10 @@ const els = {
   blur:el('blur'), blurVal:el('blurVal'),
   lutLoadBtn:el('lutLoadBtn'), lutFile:el('lutFile'), camSel:el('camSel'),
   autoBtn:el('autoBtn'), autoVal:el('autoVal'),
-  peakBtn:el('peakBtn'), con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
+  peakBtn:el('peakBtn'), scoreBtn:el('scoreBtn'), scoreBox:el('scoreBox'),
+  boardBtn:el('boardBtn'), board:el('board'), boardList:el('boardList'),
+  boardSession:el('boardSession'), boardClose:el('boardClose'),
+  con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
   recTag:el('recTag'), recTime:el('recTime'), shotVid:el('shotVid'),
@@ -1046,6 +1247,7 @@ function doCapture(){
   g.uniform1f(b.uni.peaking, 0);   // never bake peaking into the saved photo
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
+  lastScore = state.scoreMode ? computeScore(off) : null;   // grade the shot
   const fmt = state.imgFormat==='png' ? 'image/png' : 'image/jpeg';
   const ext = state.imgFormat==='png' ? 'png' : 'jpg';
   off.toBlob(bl=>{
@@ -1070,8 +1272,9 @@ async function writeToFolder(blob, name){
 // deliver a capture: silent auto-save if a folder is set, else the tap-to-save sheet
 async function deliver(blob, name, type, isVideo){
   lastBlob=blob; lastName=name; lastType=type;
+  const showScore = (!isVideo && state.scoreMode && lastScore);
   if(state.autoSave && dirHandle){
-    try{ await writeToFolder(blob, name); toast('Saved'); return; }
+    try{ await writeToFolder(blob, name); toast('Saved'); if(!showScore) return; }
     catch(e){ toast('Folder save failed — tap Save'); }
   }
   if(lastURL) URL.revokeObjectURL(lastURL);
@@ -1083,8 +1286,9 @@ async function deliver(blob, name, type, isVideo){
   } else {
     els.shotVid.hidden=true; els.shotVid.removeAttribute('src');
     els.shot.hidden=false; els.shot.src=lastURL;
-    els.sheetHint.textContent='Tap Save to send it to Photos.';
+    els.sheetHint.textContent = (state.autoSave && dirHandle) ? 'Saved to folder.' : 'Tap Save to send it to Photos.';
   }
+  if(showScore) renderScore(lastScore); else els.scoreBox.hidden = true;
   els.sheet.classList.add('open');
 }
 function presentShot(blob){ deliver(blob, `mcam_${Date.now()}.jpg`, 'image/jpeg', false); }
@@ -1323,6 +1527,34 @@ els.con.addEventListener('input', e=>{ const v=+e.target.value; state.contrast=1
 els.sat.addEventListener('input', e=>{ const v=+e.target.value; state.saturation=1+v/100; els.satVal.textContent=(v>0?'+':'')+v; });
 els.soft.addEventListener('input', e=>{ const v=+e.target.value; state.soften=v/100; els.softVal.textContent=v+'%'; });
 els.peakBtn.addEventListener('click', ()=>{ state.peaking=!state.peaking; els.peakBtn.classList.toggle('on', state.peaking); toast(state.peaking?'Focus peaking on':'Focus peaking off'); });
+async function enableScoring(){
+  // GPS -> Level
+  if(navigator.geolocation){
+    try{
+      geoWatchId = navigator.geolocation.watchPosition(
+        p=>{ lastPos = { lat:p.coords.latitude, lng:p.coords.longitude }; },
+        ()=>{}, { enableHighAccuracy:false, maximumAge:30000, timeout:15000 });
+    }catch(e){}
+  }
+  // device motion -> "in motion" rule
+  try{
+    if(typeof DeviceMotionEvent!=='undefined' && DeviceMotionEvent.requestPermission){
+      const pm = await DeviceMotionEvent.requestPermission(); if(pm==='granted') window.addEventListener('devicemotion', onMotion);
+    } else { window.addEventListener('devicemotion', onMotion); }
+  }catch(e){}
+}
+function disableScoring(){
+  if(geoWatchId!=null && navigator.geolocation){ navigator.geolocation.clearWatch(geoWatchId); geoWatchId=null; }
+  window.removeEventListener('devicemotion', onMotion); motionMag=0;
+}
+els.scoreBtn.addEventListener('click', async ()=>{
+  state.scoreMode = !state.scoreMode;
+  els.scoreBtn.classList.toggle('on', state.scoreMode);
+  if(state.scoreMode){ await enableScoring(); toast('Scoring on'); }
+  else { disableScoring(); els.scoreBox.hidden = true; toast('Scoring off'); }
+});
+els.boardBtn.addEventListener('click', openBoard);
+els.boardClose.addEventListener('click', ()=>els.board.classList.remove('open'));
 els.fmtSel.addEventListener('change', e=>{ state.imgFormat=e.target.value; els.qual.disabled=(state.imgFormat==='png'); });
 els.qual.addEventListener('input', e=>{ state.quality=(+e.target.value)/100; els.qualVal.textContent=e.target.value+'%'; });
 els.int.addEventListener('input', e=>{ state.intensity=(+e.target.value)/100; syncVals(); });
@@ -1353,7 +1585,7 @@ els.autoBtn.addEventListener('click', ()=>{
 });
 els.saveBtn.addEventListener('click', saveShot);
 els.backBtn.addEventListener('click', ()=>{ els.sheet.classList.remove('open');
-  els.sheetHint.textContent='Tap Save to send it to Photos.'; });
+  els.scoreBox.hidden=true; els.sheetHint.textContent='Tap Save to send it to Photos.'; });
 
 syncLook(); syncVals(); updateAutoBtn();
 if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
