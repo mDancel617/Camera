@@ -319,6 +319,41 @@
   .results .btns button{flex:1; all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:9px;
     padding:12px; color:#07071a; background:#36e0ff; box-shadow:4px 4px 0 #0a7d5a}
   .results .btns button.alt{background:#ffe14d; box-shadow:4px 4px 0 #b3820a}
+
+  /* ============ 8-BIT PHOTOGRAPHER SPRITE ============ */
+  #sprite{image-rendering:pixelated; width:150px; height:181px; margin-bottom:6px; display:block}
+  #mascot{position:absolute; left:8px; bottom:150px; width:62px; height:75px; image-rendering:pixelated;
+    z-index:4; display:none; pointer-events:none; filter:drop-shadow(2px 2px 0 rgba(0,0,0,.5))}
+  #mascot.on{display:block}
+
+  /* ============ SHINY METAL BUTTONS (retro theme) ============ */
+  .round.ghost{border:2px solid #cfd4da !important; color:#15181d !important;
+    background:linear-gradient(150deg,#f4f6f9 0%,#b2b8c1 46%,#6a6f78 100%) !important;
+    box-shadow:inset 0 2px 2px rgba(255,255,255,.85), inset 0 -3px 5px rgba(0,0,0,.4), 0 2px 5px rgba(0,0,0,.55) !important}
+  .round.solid{color:#15181d !important;
+    background:linear-gradient(150deg,#fdfdff 0%,#c7cbd2 52%,#888e96 100%) !important;
+    box-shadow:inset 0 2px 2px rgba(255,255,255,.9), inset 0 -3px 5px rgba(0,0,0,.35), 0 2px 5px rgba(0,0,0,.55) !important}
+  .shutter{border:3px solid #dadde1 !important;
+    background:linear-gradient(150deg,#edeff2,#a0a6ae 60%,#5e636c) !important;
+    box-shadow:inset 0 2px 3px rgba(255,255,255,.9), 0 2px 7px rgba(0,0,0,.6) !important}
+  .shutter .core{background:radial-gradient(circle at 42% 34%, #fff, #d2d6db 58%, #9 aa0a8) !important;
+    background:radial-gradient(circle at 42% 34%, #fff, #d2d6db 58%, #9aa0a8) !important;
+    box-shadow:inset 0 2px 3px #fff, inset 0 -2px 4px #7b8088, 0 0 0 3px #c8102e !important}
+  .shutter.vid .core{background:radial-gradient(circle at 42% 34%,#ff9a8c,#e3433a) !important;
+    box-shadow:inset 0 2px 3px #ffd9d2, 0 0 0 3px #7a1a14 !important}
+
+  /* ============ DIRECT CRITIQUE FLASH ============ */
+  .crit{position:absolute; left:50%; bottom:150px; transform:translateX(-50%); z-index:5;
+    width:min(360px,88vw); display:none; flex-direction:column; gap:3px; pointer-events:none;
+    background:linear-gradient(180deg,#120a2e,#0a0a1e); border:3px solid #36e0ff;
+    box-shadow:0 0 14px #36e0ff55, 6px 6px 0 rgba(0,0,0,.5); font-family:var(--pixel); color:#fff; padding:10px 12px}
+  .crit.on{display:flex}
+  .crit .hd{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px}
+  .crit .t{font-size:18px; color:#ffe14d; text-shadow:2px 2px 0 #c0392b}
+  .crit .r{font-size:15px; color:#ff5df2}
+  .crit .ln{font-size:8px; line-height:1.55}
+  .crit .ln.good{color:#5bff9d} .crit .ln.bad{color:#ff8a8a}
+  .crit .tip{font-size:8px; color:#36e0ff; margin-top:4px; line-height:1.5}
 </style>
 </head>
 <body>
@@ -337,6 +372,8 @@
     <div class="sh" id="hudShots">0/25</div>
     <div class="pop" id="hudPop"></div>
   </div>
+  <div class="crit" id="crit"></div>
+  <canvas id="mascot" width="48" height="58"></canvas>
   <div class="level" id="level"><div class="lvref"></div><div class="lvline" id="lvline"></div></div>
 
   <div class="top">
@@ -353,6 +390,7 @@
       <button id="peakBtn">PEAK</button>
       <button id="scoreBtn">SCORE</button>
       <button id="boardBtn">BOARD</button>
+      <button id="sndBtn">SND</button>
     </div>
     <div class="look" id="lookTag">CLASSIC</div>
   </div>
@@ -490,6 +528,7 @@
 </div>
 
 <div class="overlay" id="overlay">
+  <canvas id="sprite" width="48" height="58"></canvas>
   <h1>M·CAM</h1>
   <div class="tag">◂ PHOTO SAFARI ▸</div>
   <p id="ovText" hidden></p>
@@ -548,7 +587,8 @@ const state = {
   peaking:false,           // focus peaking overlay (preview only)
   imgFormat:'jpeg',        // 'jpeg' | 'png'
   quality:0.95,            // JPEG quality
-  scoreMode:false          // Pokémon Snap-style photo scoring
+  scoreMode:false,         // Pokémon Snap-style photo scoring
+  muted:false              // retro sound effects
 };
 
 /* ---------- photo scoring (Snap-style) ---------- */
@@ -566,7 +606,7 @@ function rankFor(t){ return t>=1800?['S','s']: t>=1600?['A','a']: t>=1400?['B','
 /* ---------- 25-shot round ---------- */
 const ROUND_MAX = 25;
 let roundShots = [], roundTotal = 0;
-function startRound(){ roundShots = []; roundTotal = 0; updateHud(); els.hud.classList.add('on'); }
+function startRound(){ roundShots = []; roundTotal = 0; updateHud(); els.hud.classList.add('on'); startMascot(); }
 function updateHud(){
   els.hudScore.textContent = roundTotal;
   els.hudShots.textContent = roundShots.length + '/' + ROUND_MAX;
@@ -580,12 +620,25 @@ function addRoundShot(blob){
   if(!lastScore) return;
   roundShots.push({ thumb:lastThumb, total:lastScore.total, blob, level:lastScore.levelName });
   roundTotal += lastScore.total;
-  updateHud(); flashPop(lastScore.total);
+  updateHud(); flashPop(lastScore.total); showCrit(lastScore);
+  const rk = rankFor(lastScore.total)[0];
+  sfxScore(rk); mascotReact(rk);
   if(roundShots.length >= ROUND_MAX) finishRound();
+}
+// direct per-shot critique: what you scored and exactly why + how to improve
+function showCrit(res){
+  const [rank] = rankFor(res.total);
+  const lines = res.pos.map(p=>`<div class="ln good">▲ ${p[0]} +${p[1]}</div>`)
+    .concat(res.neg.map(p=>`<div class="ln bad">▼ ${p[0]} ${p[1]}</div>`)).join('');
+  const tip = (res.tips && res.tips.length) ? `<div class="tip">▶ ${res.tips[0]}</div>` : '';
+  els.crit.innerHTML = `<div class="hd"><span class="t">${res.total}</span><span class="r">RANK ${rank}</span></div>`
+    + lines + tip;
+  els.crit.classList.add('on');
+  clearTimeout(showCrit._t); showCrit._t = setTimeout(()=>els.crit.classList.remove('on'), 3600);
 }
 function endScoring(){
   state.scoreMode = false; els.scoreBtn.classList.remove('on');
-  els.hud.classList.remove('on'); disableScoring();
+  els.hud.classList.remove('on'); els.crit.classList.remove('on'); stopMascot(); disableScoring();
 }
 function finishRound(){
   if(roundShots.length === 0){ endScoring(); return; }
@@ -692,27 +745,29 @@ function computeScore(canvas){
   tc.strokeStyle = '#000'; tc.lineWidth = 2; tc.beginPath(); tc.arc(cx*tw, cy*th, 8, 0, 7); tc.stroke();
   const thumbURL = t.toDataURL('image/png');
 
-  const pos=[], neg=[];
+  const pos=[], neg=[], tips=[];
   // focus / sharp / blur
-  if(lapVar < SCORE.blur){ neg.push(['Blurry', -SCORE.down]); }
+  if(lapVar < SCORE.blur){ neg.push(['Blurry', -SCORE.down]); tips.push('Hold steady or tap the subject to focus'); }
   else { if(lapVar >= SCORE.focus) pos.push(['In focus', SCORE.up]);
-         if(lapVar >= SCORE.sharp) pos.push(['Sharp', SCORE.up]); }
+         if(lapVar >= SCORE.sharp) pos.push(['Sharp', SCORE.up]);
+         else tips.push('Almost sharp — steady the shot to earn the Sharp bonus'); }
   // motion
-  if(motionMag > SCORE.motion) neg.push(['In motion', -SCORE.down]);
+  if(motionMag > SCORE.motion){ neg.push(['In motion', -SCORE.down]); tips.push('Camera moved — brace your arms, breathe out, then shoot'); }
   // exposure
-  if(brightness < SCORE.dark) neg.push(['Too dark', -SCORE.down]);
-  else if(brightness > SCORE.bright) neg.push(['Too bright', -SCORE.down]);
+  if(brightness < SCORE.dark){ neg.push(['Too dark', -SCORE.down]); tips.push('Underexposed — find more light or raise exposure (EV)'); }
+  else if(brightness > SCORE.bright){ neg.push(['Too bright', -SCORE.down]); tips.push('Overexposed — avoid the sky/sun or lower exposure (EV)'); }
   // rule of thirds
   if(dThirds < SCORE.thirds) pos.push(['Rule of thirds', SCORE.up]);
-  else neg.push(['Off thirds', -SCORE.down]);
+  else { neg.push(['Off thirds', -SCORE.down]); tips.push('Move your subject onto a thirds line, not dead-center'); }
   // golden ratio
   if(dGolden < SCORE.golden) pos.push(['Golden ratio', SCORE.up]);
-  else neg.push(['Off golden ratio', -SCORE.down]);
+  else { neg.push(['Off golden ratio', -SCORE.down]); tips.push('Nudge the subject toward a golden-ratio point'); }
+  if(tips.length===0) tips.push('Perfect frame — now chase a bolder angle or a special moment!');
 
   let total = SCORE.start;
   pos.forEach(p=>total+=p[1]); neg.forEach(p=>total+=p[1]);
   const lvl = levelForPosition(lastPos);
-  const res = { total, pos, neg, levelName:lvl.name, levelBest:lvl.best,
+  const res = { total, pos, neg, tips, levelName:lvl.name, levelBest:lvl.best,
                 levelKey:lvl.key, levelStore:lvl.store, thumbURL };
   saveLevelBest(res);
   res.levelBest = Math.max(res.levelBest, total);
@@ -783,6 +838,7 @@ const els = {
   hud:el('hud'), hudScore:el('hudScore'), hudShots:el('hudShots'), hudPop:el('hudPop'),
   results:el('results'), resTitle:el('resTitle'), resStat:el('resStat'), resTotal:el('resTotal'),
   resRank:el('resRank'), resGrid:el('resGrid'), resAgain:el('resAgain'), resBoard:el('resBoard'),
+  sprite:el('sprite'), crit:el('crit'), mascot:el('mascot'), sndBtn:el('sndBtn'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
@@ -1183,6 +1239,10 @@ async function start(){
     refreshCameras();
     if(await maybeAutoSelectExternal()) return start();  // prefer an external webcam when present
     if(caps.zoom) setZoom(state.zoom);  // re-apply zoom to new lens via hardware if available
+    if(!state.scoreMode){                 // scoring + round begin automatically
+      state.scoreMode = true; els.scoreBtn.classList.add('on');
+      await enableScoring(); startRound();
+    }
   }catch(e){
     els.overlay.style.display='flex';
     els.ovText.hidden = false;
@@ -1366,6 +1426,7 @@ function capture(){
 function doCapture(){
   if(!video || video.readyState<2) return;
   els.flash.classList.remove('go'); void els.flash.offsetWidth; els.flash.classList.add('go');
+  sfxShutter();
   const vw=video.videoWidth, vh=video.videoHeight;
   const off=document.createElement('canvas'); off.width=vw; off.height=vh;
   const g=off.getContext('webgl', {preserveDrawingBuffer:true});
@@ -1582,7 +1643,133 @@ function syncVals(){
   els.evReadout.textContent=(ev>=0?'+':'')+ev.toFixed(1)+' EV';
 }
 
-els.startBtn.addEventListener('click', start);
+/* ---------- 8-bit photographer sprite (breathing + shutter) ---------- */
+let spriteT = 0, spriteFlash = 0, spriteRAF = 0;
+function pxr(c,x,y,w,h,col){ c.fillStyle=col; c.fillRect(x,y,w,h); }
+function drawPhotographer(){
+  const c = els.sprite.getContext('2d'); if(!c) return;
+  c.clearRect(0,0,48,58);
+  const dy = Math.round(Math.sin(spriteT)*1);        // breathing rise/fall
+  const chest = Math.sin(spriteT) > 0.5 ? 1 : 0;      // slight chest expand
+  // shadow
+  pxr(c,16,54,16,2,'rgba(0,0,0,0.38)');
+  // legs + shoes (suit trousers)
+  pxr(c,19,34,4,16,'#23262e'); pxr(c,25,34,4,16,'#23262e');
+  pxr(c,18,50,6,3,'#0d0d0f');  pxr(c,24,50,6,3,'#0d0d0f');
+  // torso jacket (breathes)
+  pxr(c,16-chest,19+dy,16+chest*2,16,'#2b2f3a');
+  pxr(c,22,19+dy,4,10,'#e8e8ec');   // shirt
+  pxr(c,23,19+dy,2,8,'#c8102e');    // tie
+  pxr(c,16-chest,19+dy,3,14,'#1f222a'); pxr(c,29+chest,19+dy,3,14,'#1f222a'); // lapels
+  // arms raised to the camera
+  pxr(c,13,14+dy,4,8,'#2b2f3a'); pxr(c,31,14+dy,4,8,'#2b2f3a');
+  pxr(c,14,12+dy,3,3,'#e3b48a'); pxr(c,31,12+dy,3,3,'#e3b48a'); // hands
+  // head + hair
+  pxr(c,20,6+dy,9,10,'#e3b48a');
+  pxr(c,19,4+dy,11,4,'#3a2a1a'); pxr(c,19,6+dy,2,3,'#3a2a1a'); pxr(c,28,6+dy,2,3,'#3a2a1a');
+  // camera held to the face
+  pxr(c,18,11+dy,13,7,'#111');      // body
+  pxr(c,20,9+dy,4,2,'#111');        // viewfinder hump
+  pxr(c,22,12+dy,6,5,'#333');       // lens barrel
+  pxr(c,23,13+dy,4,3,'#39c');       // lens glass
+  pxr(c,29,10+dy,3,2,'#444');       // flash shoe
+  // shutter flash burst
+  if(spriteFlash>0){
+    c.fillStyle='rgba(255,255,230,'+spriteFlash+')';
+    c.beginPath(); c.arc(31,12+dy, 2+spriteFlash*16, 0, 7); c.fill();
+  }
+}
+function spriteLoop(){ spriteT += 0.09; if(spriteFlash>0) spriteFlash=Math.max(0,spriteFlash-0.05);
+  drawPhotographer(); spriteRAF=requestAnimationFrame(spriteLoop); }
+spriteLoop();
+
+/* ---------- retro chiptune SFX (WebAudio, no files) ---------- */
+let actx = null;
+function audio(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(actx && actx.state==='suspended') actx.resume(); return actx; }
+function beep(freq, dur, type, vol, when){
+  const a = actx; if(!a || state.muted) return;
+  const t = a.currentTime + (when||0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type||'square'; o.frequency.value = freq; o.connect(g); g.connect(a.destination);
+  g.gain.setValueAtTime(vol||0.07, t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.start(t); o.stop(t+dur);
+}
+function sfxShutter(){ beep(1100,0.025,'square',0.06); beep(280,0.05,'square',0.05,0.028); }
+function sfxScore(rank){
+  if(rank==='S') [660,880,1320,1760].forEach((f,i)=>beep(f,0.12,'square',0.07,i*0.09));
+  else if(rank==='A') [660,990,1320].forEach((f,i)=>beep(f,0.1,'square',0.06,i*0.09));
+  else if(rank==='D'){ beep(220,0.18,'sawtooth',0.07); beep(150,0.22,'sawtooth',0.06,0.13); }
+  else beep(560,0.09,'square',0.05);
+}
+
+/* ---------- pose-based figure renderer (used by start sprite + mascot) ---------- */
+function drawFigure(c, pose, t, flash){
+  c.clearRect(0,0,48,58);
+  const br = Math.round(Math.sin(t)*1);
+  const dyHead = br + (pose==='slump'?3:0);
+  const tTop = 19 + (pose==='slump'?2:0);
+  pxr(c,16,54,16,2,'rgba(0,0,0,0.38)');                 // shadow
+  pxr(c,19,34,4,16,'#23262e'); pxr(c,25,34,4,16,'#23262e'); // legs
+  pxr(c,18,50,6,3,'#0d0d0f');  pxr(c,24,50,6,3,'#0d0d0f');  // shoes
+  pxr(c,16,tTop+br,16,16,'#2b2f3a');                    // jacket
+  pxr(c,22,tTop+br,4,10,'#e8e8ec'); pxr(c,23,tTop+br,2,8,'#c8102e'); // shirt+tie
+  pxr(c,16,tTop+br,3,14,'#1f222a'); pxr(c,29,tTop+br,3,14,'#1f222a'); // lapels
+  pxr(c,20,6+dyHead,9,10,'#e3b48a');                    // head
+  pxr(c,19,4+dyHead,11,4,'#3a2a1a'); pxr(c,19,6+dyHead,2,3,'#3a2a1a'); pxr(c,28,6+dyHead,2,3,'#3a2a1a'); // hair
+  if(pose==='ready' || pose==='shoot'){
+    pxr(c,13,14+br,4,8,'#2b2f3a'); pxr(c,31,14+br,4,8,'#2b2f3a');    // arms up
+    pxr(c,14,12+br,3,3,'#e3b48a'); pxr(c,31,12+br,3,3,'#e3b48a');    // hands
+    pxr(c,18,11+br,13,7,'#111'); pxr(c,20,9+br,4,2,'#111');          // camera
+    pxr(c,22,12+br,6,5,'#333'); pxr(c,23,13+br,4,3,'#39c'); pxr(c,29,10+br,3,2,'#444');
+    if(flash>0){ c.fillStyle='rgba(255,255,230,'+flash+')'; c.beginPath(); c.arc(31,12+br,2+flash*16,0,7); c.fill(); }
+  } else {
+    pxr(c,21,24+br,8,5,'#111'); pxr(c,23,25+br,4,3,'#39c');          // camera at chest
+    pxr(c,20,19+br,1,6,'#0a0a0a'); pxr(c,29,19+br,1,6,'#0a0a0a');    // strap
+    if(pose==='wave'){
+      pxr(c,14,20+br,3,11,'#2b2f3a'); pxr(c,14,31+br,3,3,'#e3b48a'); // left arm down
+      const wv = Math.sin(t*7)>0 ? 0 : -2;
+      pxr(c,31,9+br+wv,3,10,'#2b2f3a'); pxr(c,31,6+br+wv,3,3,'#e3b48a'); // right arm wave
+    } else if(pose==='thumbsup'){
+      pxr(c,14,20+br,3,11,'#2b2f3a'); pxr(c,14,31+br,3,3,'#e3b48a');
+      pxr(c,31,7+br,3,12,'#2b2f3a'); pxr(c,31,4+br,3,3,'#e3b48a');    // arm up
+      pxr(c,33,2+br,2,2,'#ffe14d');                                   // spark
+    } else { // idle / slump: arms down
+      pxr(c,14,20+br,3,11,'#2b2f3a'); pxr(c,14,31+br,3,3,'#e3b48a');
+      pxr(c,31,20+br,3,11,'#2b2f3a'); pxr(c,31,31+br,3,3,'#e3b48a');
+    }
+  }
+}
+
+/* ---------- reacting corner mascot (during a round) ---------- */
+let mascotRAF=0, mascotT=0, mascotPose='idle', mascotFlash=0, mascotReactUntil=0, mascotWaveUntil=0, nextWave=0;
+function mascotLoop(){
+  mascotT += 0.09; if(mascotFlash>0) mascotFlash=Math.max(0,mascotFlash-0.06);
+  const now = performance.now();
+  let pose;
+  if(now < mascotReactUntil) pose = mascotPose;              // thumbs-up / slump
+  else if(now < mascotWaveUntil) pose = 'wave';
+  else { pose = 'idle'; if(now > nextWave){ mascotWaveUntil = now+1600; nextWave = now+7000+Math.random()*4000; } }
+  const c = els.mascot.getContext('2d'); if(c) drawFigure(c, mascotFlash>0?'shoot':pose, mascotT, mascotFlash);
+  mascotRAF = requestAnimationFrame(mascotLoop);
+}
+function startMascot(){ els.mascot.classList.add('on'); nextWave=performance.now()+4000;
+  mascotReactUntil=0; mascotWaveUntil=0; cancelAnimationFrame(mascotRAF); mascotLoop(); }
+function stopMascot(){ els.mascot.classList.remove('on'); cancelAnimationFrame(mascotRAF); }
+function mascotReact(rank){
+  mascotFlash = 1;
+  setTimeout(()=>{ mascotPose = (rank==='S'||rank==='A') ? 'thumbsup' : (rank==='D' ? 'slump' : 'idle');
+    mascotReactUntil = performance.now() + 2200; }, 240);
+}
+
+els.startBtn.addEventListener('click', ()=>{
+  audio(); sfxShutter();                   // unlock sound + shutter click
+  spriteFlash = 1;                         // he takes the shot
+  els.startBtn.disabled = true;
+  setTimeout(()=>{ cancelAnimationFrame(spriteRAF); start(); }, 480);
+});
+els.sndBtn.addEventListener('click', ()=>{ state.muted=!state.muted; els.sndBtn.classList.toggle('on', !state.muted);
+  if(!state.muted){ audio(); beep(880,0.06,'square',0.05); } });
 els.shutterBtn.addEventListener('click', ()=>{
   if(state.mode==='photo') capture();
   else if(recording) stopRec(); else startRec();
@@ -1755,7 +1942,7 @@ els.saveBtn.addEventListener('click', saveShot);
 els.backBtn.addEventListener('click', ()=>{ els.sheet.classList.remove('open');
   els.scoreBox.hidden=true; els.sheetHint.textContent='Tap Save to send it to Photos.'; });
 
-syncLook(); syncVals(); updateAutoBtn();
+syncLook(); syncVals(); updateAutoBtn(); els.sndBtn.classList.add('on');
 if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
   els.ovText.hidden=false;
   els.ovText.textContent='This browser can\'t open the camera. Use Safari on iPhone, opened over an https link.';
