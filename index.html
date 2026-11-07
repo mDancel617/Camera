@@ -56,11 +56,6 @@
   .grid .h{left:0; right:0; height:1px}
   .grid .v1{left:33.33%} .grid .v2{left:66.66%}
   .grid .h1{top:33.33%} .grid .h2{top:66.66%}
-  /* rule-of-thirds target dots (score +200 each when the subject touches one) */
-  .grid .dot{width:13px; height:13px; border-radius:50%; margin:-6.5px 0 0 -6.5px;
-    background:rgba(255,50,50,.85); box-shadow:0 0 0 2px rgba(0,0,0,.35), 0 0 8px rgba(255,40,40,.65)}
-  .grid .d1{left:33.33%; top:33.33%} .grid .d2{left:66.66%; top:33.33%}
-  .grid .d3{left:33.33%; top:66.66%} .grid .d4{left:66.66%; top:66.66%}
 
   /* tap focus reticle */
   .reticle{position:absolute; width:74px; height:74px; margin:-37px 0 0 -37px; border:1px solid var(--accent);
@@ -388,6 +383,11 @@
   .nameinput::placeholder{color:#2a4a52}
   .fw{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:9; display:none}
   .fw.on{display:block}
+  .himsg{display:none; text-align:center; font-family:var(--pixel); font-size:13px; line-height:1.7;
+    color:#36ff8a; text-shadow:2px 2px 0 #0a7d3a, 0 0 12px #36ff8a88; margin:8px 4px 2px;
+    position:relative; z-index:10; animation:hiPulse 1s steps(2,start) infinite}
+  .himsg.on{display:block}
+  @keyframes hiPulse{50%{opacity:.5}}
 
   /* keep the photographer visible in landscape (center-bottom, clear of edge controls) */
   @media (orientation:landscape) and (max-height:600px){
@@ -403,7 +403,7 @@
 
 <div id="stage">
   <canvas id="view"></canvas>
-  <div class="grid" id="grid"><b class="v v1"></b><b class="v v2"></b><b class="h h1"></b><b class="h h2"></b><b class="dot d1"></b><b class="dot d2"></b><b class="dot d3"></b><b class="dot d4"></b></div>
+  <div class="grid" id="grid"><b class="v v1"></b><b class="v v2"></b><b class="h h1"></b><b class="h h2"></b></div>
   <div class="brackets"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
   <div class="reticle" id="reticle"></div>
   <div class="count" id="count"></div>
@@ -557,6 +557,7 @@
   <h2 id="resTitle">ROUND COMPLETE</h2>
   <div class="stat" id="resStat">LEVEL — · 25 SHOTS</div>
   <div class="big"><span id="resTotal">0</span><span class="rk" id="resRank">S</span></div>
+  <div class="himsg" id="hiMsg">ALL YOUR SKILLS,<br>ARE BELONG TO YOU.</div>
   <div class="namerow">
     <span class="nlbl">ENTER NAME</span>
     <input id="resName" class="nameinput" maxlength="8" placeholder="YOU" autocomplete="off" spellcheck="false">
@@ -573,7 +574,7 @@
   <h2>HIGH SCORES</h2>
   <div class="sub" id="boardSession">SESSION 0</div>
   <div class="list" id="boardList"></div>
-  <button class="close" id="boardClose">BACK TO CAMERA</button>
+  <button class="close" id="boardClose">► NEW ROUND</button>
 </div>
 
 <div class="overlay" id="overlay">
@@ -711,7 +712,9 @@ function finishRound(){
   pendingSaved = false;
   els.resName.value = (localStorage.getItem('mcam_name')||'').toUpperCase();
   els.results.classList.add('open');
-  if(rank==='S' || rank==='A' || total>prevBest){ sfxFanfare(); launchFireworks(2800); }
+  const isHigh = (rank==='S' || rank==='A' || total>prevBest);
+  els.hiMsg.classList.toggle('on', isHigh);     // "ALL YOUR SKILLS, ARE BELONG TO YOU."
+  if(isHigh){ sfxFanfare(); launchFireworks(2800); }
   endScoring();
 }
 // commit the held round to the leaderboard with the entered name (once)
@@ -754,6 +757,22 @@ function launchFireworks(ms){
   cancelAnimationFrame(fwRAF); fwRAF = requestAnimationFrame(frame);
 }
 function sfxFanfare(){ if(state.muted) return; [523,659,784,1047,1319].forEach((f,i)=>beep(f,0.15,'square',0.07,i*0.1)); }
+/* ---- little chiptune songs (melody + soft bass), no files ---- */
+function playTune(seq, bpm, lead){
+  if(state.muted) return; audio(); if(!actx) return;
+  const beat = 60/(bpm||140); let t=0;
+  seq.forEach(([f,b])=>{
+    if(f>0){ beep(f, beat*b*0.9, lead||'square', 0.06, t);          // melody
+             beep(f/2, beat*b*0.9, 'triangle', 0.03, t); }          // soft octave-down bass
+    t += beat*b;
+  });
+}
+// bright, lively opening riff
+const TUNE_OPEN = [[523,1],[659,1],[784,1],[1047,2],[784,1],[1047,1],[1319,2],
+                   [1175,1],[1047,1],[880,1],[784,1],[1047,1],[784,3]];
+// triumphant leaderboard theme
+const TUNE_END  = [[784,1],[659,1],[523,2],[587,1],[659,1],[784,2],
+                   [880,1],[784,1],[1047,2],[784,1],[1047,1],[1319,3]];
 // save every frame from the round to Photos / library in one go
 async function saveAllToPhotos(){
   const blobs = (pendingRound && pendingRound.blobs ? pendingRound.blobs : []).filter(Boolean);
@@ -955,6 +974,7 @@ function openBoard(){
       }).join('')
     : '<div class="empty">No rounds yet.<br>Tap SCORE, take up to<br>25 photos, finish a round!</div>';
   els.board.classList.add('open');
+  playTune(TUNE_END, 136);          // retro leaderboard theme
 }
 const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
 const ZOOM_MAX = 6;
@@ -983,7 +1003,7 @@ const els = {
   hud:el('hud'), hudScore:el('hudScore'), hudShots:el('hudShots'), hudPop:el('hudPop'),
   results:el('results'), resTitle:el('resTitle'), resStat:el('resStat'), resTotal:el('resTotal'),
   resRank:el('resRank'), resGrid:el('resGrid'), resAgain:el('resAgain'), resBoard:el('resBoard'),
-  resName:el('resName'), resSaveAll:el('resSaveAll'), fw:el('fw'),
+  resName:el('resName'), resSaveAll:el('resSaveAll'), fw:el('fw'), hiMsg:el('hiMsg'),
   sprite:el('sprite'), crit:el('crit'), mascot:el('mascot'), sndBtn:el('sndBtn'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
@@ -1925,6 +1945,7 @@ function mascotReact(rank){
 
 els.startBtn.addEventListener('click', ()=>{
   audio(); sfxShutter();                   // unlock sound + shutter click
+  playTune(TUNE_OPEN, 152);                // retro opening song
   spriteFlash = 1;                         // he takes the shot
   els.startBtn.disabled = true;
   setTimeout(()=>{ cancelAnimationFrame(spriteRAF); start(); }, 480);
@@ -2058,7 +2079,12 @@ els.scoreBtn.addEventListener('click', async ()=>{
   }
 });
 els.boardBtn.addEventListener('click', openBoard);
-els.boardClose.addEventListener('click', ()=>els.board.classList.remove('open'));
+els.boardClose.addEventListener('click', async ()=>{
+  commitRound(); stopFireworks();
+  els.board.classList.remove('open');
+  state.scoreMode = true; els.scoreBtn.classList.add('on');
+  await enableScoring(); startRound();
+});
 els.resName.addEventListener('input', e=>{ e.target.value = e.target.value.toUpperCase(); });
 els.resSaveAll.addEventListener('click', saveAllToPhotos);
 els.resAgain.addEventListener('click', async ()=>{
