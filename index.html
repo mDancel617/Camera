@@ -166,6 +166,10 @@
   .board .row{display:flex; justify-content:space-between; font-size:10px; color:#cfe}
   .board .row .b{color:#ffe14d}
   .board .empty{font-size:9px; color:#9aa; text-align:center; margin-top:30px; line-height:1.8}
+  .board .roundrow{border-bottom:1px solid #2a1c4a; padding-bottom:9px}
+  .board .meta{font-size:7px; color:#8f7dff; letter-spacing:1px; margin:2px 0 4px}
+  .board .strip{display:flex; gap:3px; overflow-x:auto}
+  .board .strip img{height:40px; width:40px; object-fit:cover; border:1px solid #36e0ff; flex:0 0 auto}
   .board .close{all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:10px; color:#07071a;
     background:#36e0ff; padding:12px; margin-top:14px; box-shadow:4px 4px 0 #0b6; }
 
@@ -250,6 +254,71 @@
     .count{font-size:88px}
     .overlay h1{font-size:40px}
   }
+
+  /* ============ RETRO OPENING CARD ============ */
+  .overlay{background:linear-gradient(180deg,#1a0b3a,#07071a) !important}
+  .overlay::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px)}
+  .overlay > *{position:relative; z-index:1}
+  .overlay h1{font-family:var(--pixel) !important; font-weight:400 !important; font-size:32px !important;
+    letter-spacing:.04em !important; padding-left:0 !important; color:#ffe14d;
+    text-shadow:4px 4px 0 #c0392b, 0 0 18px #ffe14d55}
+  .overlay .tag{font-family:var(--pixel); font-size:10px; letter-spacing:2px; color:#36e0ff; text-shadow:0 0 8px #36e0ff99}
+  .overlay button{font-family:var(--pixel) !important; font-weight:400 !important; font-size:13px !important;
+    letter-spacing:1px !important; border-radius:0 !important; background:#36e0ff !important; color:#07071a !important;
+    box-shadow:5px 5px 0 #0a7d5a; padding:16px 26px !important}
+  .overlay .coin{font-family:var(--pixel); font-size:7px; letter-spacing:1px; color:#ff5df2; animation:blink2 1.2s steps(2,start) infinite}
+  @keyframes blink2{50%{opacity:.25}}
+
+  /* ============ LEICA-STYLE CONTROL DESIGN ============ */
+  /* black top-plate + chrome hairlines + a single red accent */
+  .readout{background:linear-gradient(180deg,#1c1c1e,#0e0e0f) !important;
+    border-top:1px solid #3a3a3c; box-shadow:inset 0 1px 0 #55555a, 0 -1px 6px rgba(0,0,0,.5)}
+  .cell{border-right-color:#333 !important}
+  .cell .k{color:#9a9a9e !important}
+  .cell .v{color:#f2f2f2 !important}
+  .bar{background:linear-gradient(180deg,#141416,#070708); border-top:1px solid #3a3a3c;
+    margin-top:0; padding-top:12px !important}
+  .round{border-radius:50%}
+  .ghost{border:2px solid #6e6e73 !important; background:radial-gradient(circle at 35% 30%, #2a2a2c, #161617) !important; color:#e8e8ea !important}
+  .solid{background:linear-gradient(180deg,#f4f4f4,#d9d9d9) !important; color:#1a1a1a !important;
+    box-shadow:inset 0 1px 0 #fff, 0 1px 3px rgba(0,0,0,.6)}
+  .shutter{border-color:#c8c8cc !important;
+    background:radial-gradient(circle at 50% 38%, #3a3a3c, #0c0c0d) !important}
+  .shutter .core{background:radial-gradient(circle at 42% 34%, #fff, #c9c9cd) !important;
+    box-shadow:inset 0 2px 3px #fff, inset 0 -2px 4px #8a8a8e, 0 0 0 2px #c8102e55}
+  .shutter.vid .core{background:#e3433a !important}
+  .top .mode{color:#c8102e !important}   /* red accent */
+
+  /* ============ LIVE SCORE HUD (top-right) ============ */
+  .hud{position:absolute; top:calc(env(safe-area-inset-top) + 10px); right:max(14px,env(safe-area-inset-right));
+    display:none; flex-direction:column; align-items:flex-end; gap:3px; z-index:4; pointer-events:none;
+    font-family:var(--pixel); text-shadow:2px 2px 0 rgba(0,0,0,.7)}
+  .hud.on{display:flex}
+  .hud .sc{font-size:16px; color:#ffe14d}
+  .hud .sh{font-size:8px; color:#36e0ff; letter-spacing:1px}
+  .hud .pop{font-size:9px; color:#5bff9d; opacity:0; transition:opacity .2s}
+  .hud .pop.show{opacity:1}
+
+  /* ============ ROUND RESULTS + LEADERBOARD ============ */
+  .results{position:absolute; inset:0; z-index:8; display:none; flex-direction:column;
+    background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.2) 2px 3px), linear-gradient(180deg,#1a0b3a,#07071a);
+    font-family:var(--pixel); color:#fff; padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 14px)}
+  .results.open{display:flex}
+  .results h2{font-size:15px; color:#ffe14d; text-align:center; text-shadow:3px 3px 0 #c0392b; margin:2px 0}
+  .results .stat{text-align:center; font-size:9px; color:#36e0ff; letter-spacing:1px; margin-bottom:2px}
+  .results .big{text-align:center; font-size:30px; color:#ffe14d; text-shadow:3px 3px 0 #c0392b; margin:4px 0}
+  .results .big .rk{color:#ff5df2; margin-left:10px}
+  .framegrid{flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0;
+    align-content:start}
+  .framegrid .cellimg{position:relative; border:2px solid #36e0ff; background:#000}
+  .framegrid .cellimg img{display:block; width:100%; aspect-ratio:1; object-fit:cover; image-rendering:auto}
+  .framegrid .cellimg .s{position:absolute; left:0; right:0; bottom:0; font-size:8px; text-align:center;
+    background:rgba(0,0,0,.65); color:#ffe14d; padding:2px 0}
+  .results .btns{display:flex; gap:10px}
+  .results .btns button{flex:1; all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:9px;
+    padding:12px; color:#07071a; background:#36e0ff; box-shadow:4px 4px 0 #0a7d5a}
+  .results .btns button.alt{background:#ffe14d; box-shadow:4px 4px 0 #b3820a}
 </style>
 </head>
 <body>
@@ -263,6 +332,11 @@
   <div class="fl" id="flLabel">≈26mm</div>
   <div class="rec" id="recTag"><span class="dot"></span><span id="recTime">0:00</span></div>
   <div class="lockbadge" id="lockBadge">AE/AF LOCKED</div>
+  <div class="hud" id="hud">
+    <div class="sc" id="hudScore">0</div>
+    <div class="sh" id="hudShots">0/25</div>
+    <div class="pop" id="hudPop"></div>
+  </div>
   <div class="level" id="level"><div class="lvref"></div><div class="lvline" id="lvline"></div></div>
 
   <div class="top">
@@ -397,6 +471,17 @@
   </div>
 </div>
 
+<div class="results" id="results">
+  <h2 id="resTitle">ROUND COMPLETE</h2>
+  <div class="stat" id="resStat">LEVEL — · 25 SHOTS</div>
+  <div class="big"><span id="resTotal">0</span><span class="rk" id="resRank">S</span></div>
+  <div class="framegrid" id="resGrid"></div>
+  <div class="btns">
+    <button class="alt" id="resAgain">NEW ROUND</button>
+    <button id="resBoard">LEADERBOARD</button>
+  </div>
+</div>
+
 <div class="board" id="board">
   <h2>HIGH SCORES</h2>
   <div class="sub" id="boardSession">SESSION 0</div>
@@ -406,8 +491,10 @@
 
 <div class="overlay" id="overlay">
   <h1>M·CAM</h1>
+  <div class="tag">◂ PHOTO SAFARI ▸</div>
   <p id="ovText" hidden></p>
   <button id="startBtn">Let's Cook!</button>
+  <div class="coin">★ THIRDS · GOLDEN RATIO · HI-SCORE ★</div>
 </div>
 
 <script>
@@ -473,8 +560,56 @@ const SCORE = {
   thirds: 0.11, golden: 0.09          // distance tolerance to a target point (normalized)
 };
 let motionMag = 0, lastPos = null, geoWatchId = null, lastScore = null;
-let sessionTotal = 0, shotCount = 0;
+let sessionTotal = 0, shotCount = 0, lastThumb = null;
 function rankFor(t){ return t>=1800?['S','s']: t>=1600?['A','a']: t>=1400?['B','']: t>=1200?['C','']: ['D','']; }
+
+/* ---------- 25-shot round ---------- */
+const ROUND_MAX = 25;
+let roundShots = [], roundTotal = 0;
+function startRound(){ roundShots = []; roundTotal = 0; updateHud(); els.hud.classList.add('on'); }
+function updateHud(){
+  els.hudScore.textContent = roundTotal;
+  els.hudShots.textContent = roundShots.length + '/' + ROUND_MAX;
+}
+function flashPop(v){
+  els.hudPop.textContent = '+' + v;
+  els.hudPop.classList.add('show');
+  clearTimeout(flashPop._t); flashPop._t = setTimeout(()=>els.hudPop.classList.remove('show'), 900);
+}
+function addRoundShot(blob){
+  if(!lastScore) return;
+  roundShots.push({ thumb:lastThumb, total:lastScore.total, blob, level:lastScore.levelName });
+  roundTotal += lastScore.total;
+  updateHud(); flashPop(lastScore.total);
+  if(roundShots.length >= ROUND_MAX) finishRound();
+}
+function endScoring(){
+  state.scoreMode = false; els.scoreBtn.classList.remove('on');
+  els.hud.classList.remove('on'); disableScoring();
+}
+function finishRound(){
+  if(roundShots.length === 0){ endScoring(); return; }
+  const total = roundTotal, avg = Math.round(total / roundShots.length);
+  const [rank] = rankFor(avg);
+  sessionTotal += total;
+  els.resStat.textContent = (roundShots[0].level || 'Level —') + ' · ' + roundShots.length + ' SHOTS · AVG ' + avg;
+  els.resTotal.textContent = total; els.resRank.textContent = rank;
+  els.resGrid.innerHTML = roundShots.map((s,i)=>
+    `<div class="cellimg" data-i="${i}"><img src="${s.thumb}" alt="frame ${i+1}"><div class="s">${s.total}</div></div>`).join('');
+  saveRound({ total, avg, rank, level:roundShots[0].level||'Level —', date:Date.now(),
+              thumbs:roundShots.map(s=>s.thumb), scores:roundShots.map(s=>s.total) });
+  els.results.classList.add('open');
+  endScoring();
+}
+function saveRound(r){
+  let arr; try{ arr = JSON.parse(localStorage.getItem('mcam_rounds')||'[]'); }catch(e){ arr = []; }
+  arr.push(r);
+  arr.sort((a,b)=>b.total-a.total);
+  while(arr.length){
+    try{ localStorage.setItem('mcam_rounds', JSON.stringify(arr.slice(0,12))); break; }
+    catch(e){ arr = arr.slice(0, Math.max(1, arr.length-1)); if(arr.length<=1 && e){ try{localStorage.setItem('mcam_rounds','[]');}catch(_){} break; } }
+  }
+}
 
 // rolling device-motion magnitude (for the "in motion" rule)
 function onMotion(e){
@@ -606,13 +741,19 @@ function renderScore(res){
 }
 
 function openBoard(){
-  let store; try{ store = JSON.parse(localStorage.getItem('mcam_levels')||'{}'); }catch(e){ store={}; }
-  const cells = (store && store.cells) ? Object.values(store.cells) : [];
-  cells.sort((a,b)=>a.num-b.num);
-  els.boardSession.textContent = 'SESSION ' + sessionTotal + (shotCount?(' · '+shotCount+' SHOTS'):'');
-  els.boardList.innerHTML = cells.length
-    ? cells.map(c=>`<div class="row"><span>LVL ${c.num}</span><span class="b">${c.best||0}</span></div>`).join('')
-    : '<div class="empty">No levels yet.<br>Turn on SCORE and<br>take some photos!</div>';
+  let rounds; try{ rounds = JSON.parse(localStorage.getItem('mcam_rounds')||'[]'); }catch(e){ rounds = []; }
+  rounds.sort((a,b)=>b.total-a.total);
+  els.boardSession.textContent = 'SESSION ' + sessionTotal;
+  els.boardList.innerHTML = rounds.length
+    ? rounds.map((r,i)=>{
+        const strip = (r.thumbs||[]).map((t,j)=>`<img src="${t}" title="${(r.scores&&r.scores[j])||''}">`).join('');
+        const d = new Date(r.date||Date.now());
+        const dd = (d.getMonth()+1)+'/'+d.getDate();
+        return `<div class="roundrow"><div class="row"><span>#${i+1} &nbsp;[${r.rank}] &nbsp;${r.level||''}</span>`
+             + `<span class="b">${r.total}</span></div><div class="meta">${dd} · ${(r.thumbs||[]).length} shots · avg ${r.avg}</div>`
+             + `<div class="strip">${strip}</div></div>`;
+      }).join('')
+    : '<div class="empty">No rounds yet.<br>Tap SCORE, take up to<br>25 photos, finish a round!</div>';
   els.board.classList.add('open');
 }
 const FL_BASE = {'0.5×':13, '1×':26, 'TELE':77};  // approx 35mm-equivalent per lens
@@ -639,6 +780,9 @@ const els = {
   peakBtn:el('peakBtn'), scoreBtn:el('scoreBtn'), scoreBox:el('scoreBox'),
   boardBtn:el('boardBtn'), board:el('board'), boardList:el('boardList'),
   boardSession:el('boardSession'), boardClose:el('boardClose'),
+  hud:el('hud'), hudScore:el('hudScore'), hudShots:el('hudShots'), hudPop:el('hudPop'),
+  results:el('results'), resTitle:el('resTitle'), resStat:el('resStat'), resTotal:el('resTotal'),
+  resRank:el('resRank'), resGrid:el('resGrid'), resAgain:el('resAgain'), resBoard:el('resBoard'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
@@ -1247,13 +1391,23 @@ function doCapture(){
   g.uniform1f(b.uni.peaking, 0);   // never bake peaking into the saved photo
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
-  lastScore = state.scoreMode ? computeScore(off) : null;   // grade the shot
+  if(state.scoreMode){ lastScore = computeScore(off); lastThumb = makeThumb(off); } else { lastScore = null; }
   const fmt = state.imgFormat==='png' ? 'image/png' : 'image/jpeg';
   const ext = state.imgFormat==='png' ? 'png' : 'jpg';
   off.toBlob(bl=>{
-    if(bl) deliver(bl, `mcam_${Date.now()}.${ext}`, fmt, false);
+    if(bl){
+      if(state.scoreMode) addRoundShot(bl);                       // round: tally, no save sheet
+      else deliver(bl, `mcam_${Date.now()}.${ext}`, fmt, false);  // normal: save sheet / auto-save
+    }
     const lose = g.getExtension('WEBGL_lose_context'); if(lose) lose.loseContext(); // free the one-shot context
   }, fmt, state.quality);
+}
+function makeThumb(canvas){
+  const s=160; const c=document.createElement('canvas'); c.width=s; c.height=s;
+  const ctx=c.getContext('2d');
+  const side=Math.min(canvas.width, canvas.height);
+  ctx.drawImage(canvas, (canvas.width-side)/2, (canvas.height-side)/2, side, side, 0,0,s,s);
+  return c.toDataURL('image/jpeg', 0.6);
 }
 let lastName='photo.jpg', lastType='image/jpeg', dirHandle=null;
 
@@ -1548,13 +1702,27 @@ function disableScoring(){
   window.removeEventListener('devicemotion', onMotion); motionMag=0;
 }
 els.scoreBtn.addEventListener('click', async ()=>{
-  state.scoreMode = !state.scoreMode;
-  els.scoreBtn.classList.toggle('on', state.scoreMode);
-  if(state.scoreMode){ await enableScoring(); toast('Scoring on'); }
-  else { disableScoring(); els.scoreBox.hidden = true; toast('Scoring off'); }
+  if(!state.scoreMode){
+    state.scoreMode = true; els.scoreBtn.classList.add('on');
+    await enableScoring(); startRound(); toast('Round started · 25 shots');
+  } else {
+    finishRound();   // end the round early and show results
+  }
 });
 els.boardBtn.addEventListener('click', openBoard);
 els.boardClose.addEventListener('click', ()=>els.board.classList.remove('open'));
+els.resAgain.addEventListener('click', async ()=>{
+  els.results.classList.remove('open');
+  state.scoreMode = true; els.scoreBtn.classList.add('on');
+  await enableScoring(); startRound();
+});
+els.resBoard.addEventListener('click', ()=>{ els.results.classList.remove('open'); openBoard(); });
+els.resGrid.addEventListener('click', e=>{
+  const c = e.target.closest('.cellimg'); if(!c) return;
+  const i = +c.dataset.i; const shot = roundShots[i];
+  if(shot && shot.blob){ els.results.classList.remove('open');
+    deliver(shot.blob, `mcam_${Date.now()}.jpg`, 'image/jpeg', false); }
+});
 els.fmtSel.addEventListener('change', e=>{ state.imgFormat=e.target.value; els.qual.disabled=(state.imgFormat==='png'); });
 els.qual.addEventListener('input', e=>{ state.quality=(+e.target.value)/100; els.qualVal.textContent=e.target.value+'%'; });
 els.int.addEventListener('input', e=>{ state.intensity=(+e.target.value)/100; syncVals(); });
