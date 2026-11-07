@@ -205,6 +205,7 @@
 
   .sheet{position:absolute; inset:0; background:#000; z-index:6; display:none; flex-direction:column}
   .sheet.open{display:flex}
+  .sheet.fromresults{z-index:9}   /* when opened from the results grid, layer above it */
   .sheet img{flex:1; width:100%; object-fit:contain; min-height:0}
   .sheet .hint{font-family:var(--mono); font-size:10px; color:var(--dim); text-align:center; padding:8px 16px; letter-spacing:.5px}
   .sheet .sbar{display:flex; gap:12px; padding:4px 16px calc(env(safe-area-inset-bottom) + 16px)}
@@ -2321,11 +2322,15 @@ els.resAgain.addEventListener('click', async ()=>{
   await enableScoring(); startRound();
 });
 els.resBoard.addEventListener('click', ()=>{ commitRound(); stopFireworks(); els.results.classList.remove('open'); openBoard(); });
+let sheetFromResults = false;
 els.resGrid.addEventListener('click', e=>{
   const c = e.target.closest('.cellimg'); if(!c) return;
   const i = +c.dataset.i; const shot = roundShots[i];
-  if(shot && shot.blob){ els.results.classList.remove('open');
-    deliver(shot.blob, `mcam_${Date.now()}.jpg`, 'image/jpeg', false); }
+  if(shot && shot.blob){
+    sheetFromResults = true;              // viewer opens on top of the results grid
+    els.sheet.classList.add('fromresults');
+    deliver(shot.blob, `mcam_${Date.now()}.jpg`, 'image/jpeg', false);
+  }
 });
 els.fmtSel.addEventListener('change', e=>{ state.imgFormat=e.target.value; els.qual.disabled=(state.imgFormat==='png'); });
 els.qual.addEventListener('input', e=>{ state.quality=(+e.target.value)/100; els.qualVal.textContent=e.target.value+'%'; });
@@ -2357,7 +2362,9 @@ els.autoBtn.addEventListener('click', ()=>{
 });
 els.saveBtn.addEventListener('click', saveShot);
 els.backBtn.addEventListener('click', ()=>{ els.sheet.classList.remove('open');
-  els.scoreBox.hidden=true; els.sheetHint.textContent='Tap Save to send it to Photos.'; });
+  els.scoreBox.hidden=true; els.sheetHint.textContent='Tap Save to send it to Photos.';
+  if(sheetFromResults){ els.sheet.classList.remove('fromresults'); sheetFromResults=false; }  // back to the results grid, not the camera
+});
 
 syncLook(); syncVals(); updateAutoBtn(); els.sndBtn.classList.add('on');
 if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
