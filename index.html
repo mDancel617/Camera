@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Photo Master">
 <meta name="theme-color" content="#000000">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
 <title>Photo Master</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -646,12 +646,14 @@ const SCORE = {
   start: 1000, up: 200, down: 300,
   goldenUp: 500,                      // golden-ratio point / spiral eye bonus
   dup: 500, dupBits: 40, dupPos: 0.08,  // duplicate penalty: similar fingerprint (of 256) AND subject in same spot
+  levelUp: 100, levelDown: 100, levelDeg: 3,   // level-horizon bonus / penalty (± degrees of tilt)
   blur: 14, focus: 26, sharp: 90,     // Laplacian-variance thresholds
   dark: 0.20, bright: 0.82,           // mean-luminance bounds
   motion: 2.2,                        // device accel delta (m/s^2) = "in motion"
   thirds: 0.11, golden: 0.05          // distance tolerance (golden is tighter — the premium +500 spot)
 };
 let motionMag = 0, lastPos = null, geoWatchId = null, lastScore = null;
+let levelRoll = 0, levelKnown = false;      // device tilt for the level/horizon rule
 let sessionTotal = 0, shotCount = 0, lastThumb = null;
 function rankFor(t){ return t>=1800?['S','s']: t>=1600?['A','a']: t>=1400?['B','']: t>=1200?['C','']: ['D','']; }
 
@@ -963,6 +965,11 @@ function computeScore(canvas){
   // golden ratio — subject on a golden point / the spiral's eye is worth +500
   if(goldenHit) pos.push(['Golden ratio', SCORE.goldenUp]);
   else { neg.push(['Off golden ratio', -SCORE.down]); tips.push('Place the subject on a golden-ratio point (the spiral’s eye) for +500'); }
+  // level horizon — +100 when the shot is level, -100 when it's tilted (needs motion/orientation access)
+  if(levelKnown){
+    if(Math.abs(levelRoll) < SCORE.levelDeg) pos.push(['Level', SCORE.levelUp]);
+    else { neg.push(['Not level', -SCORE.levelDown]); tips.push('Straighten up — keep the horizon level for +100'); }
+  }
   if(tips.length===0) tips.push('Perfect frame — now chase a bolder angle or a special moment!');
 
   let total = SCORE.start;
@@ -1763,13 +1770,19 @@ function updateLockBtn(){
 
 /* level / horizon from the device tilt sensor */
 let levelOn=false;
-function onOrient(e){
+function rollFrom(e){
   const portrait = window.innerHeight >= window.innerWidth;
   let roll = portrait ? (e.gamma||0) : ((window.orientation===-90) ? -(e.beta||0) : (e.beta||0));
-  roll = Math.max(-45, Math.min(45, roll));
+  return Math.max(-45, Math.min(45, roll));
+}
+function onOrient(e){
+  const roll = rollFrom(e);
+  levelRoll = roll; levelKnown = true;
   els.lvline.style.transform = 'rotate(' + (-roll) + 'deg)';
   els.level.classList.toggle('ok', Math.abs(roll) < 1.5);
 }
+// scoring-side listener: tracks tilt for the level rule even when the LEVEL overlay is off
+function onOrientScore(e){ levelRoll = rollFrom(e); levelKnown = true; }
 async function enableLevel(){
   try{
     if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission){
@@ -1983,6 +1996,7 @@ function mascotReact(rank){
 els.startBtn.addEventListener('click', ()=>{
   audio(); sfxShutter();                   // unlock sound + shutter click
   playOpening();                           // opening song (if not already playing)
+  requestSensors();                        // ask for motion/orientation within the tap (iOS)
   spriteFlash = 1;                         // he takes the shot
   els.startBtn.disabled = true;
   setTimeout(()=>{ cancelAnimationFrame(spriteRAF); start(); }, 480);
@@ -2096,16 +2110,21 @@ async function enableScoring(){
         ()=>{}, { enableHighAccuracy:false, maximumAge:30000, timeout:15000 });
     }catch(e){}
   }
-  // device motion -> "in motion" rule
-  try{
-    if(typeof DeviceMotionEvent!=='undefined' && DeviceMotionEvent.requestPermission){
-      const pm = await DeviceMotionEvent.requestPermission(); if(pm==='granted') window.addEventListener('devicemotion', onMotion);
-    } else { window.addEventListener('devicemotion', onMotion); }
-  }catch(e){}
+  // listen for motion ("in motion" rule) and orientation ("level" rule).
+  // Permission on iOS is requested in the start-button gesture (requestSensors); the listeners
+  // are harmless before a grant and fire as soon as it's given.
+  try{ window.addEventListener('devicemotion', onMotion); }catch(e){}
+  try{ window.addEventListener('deviceorientation', onOrientScore); }catch(e){}
+}
+// request motion/orientation access from inside a user gesture (required on iOS)
+function requestSensors(){
+  try{ if(typeof DeviceMotionEvent!=='undefined' && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(()=>{}); }catch(e){}
+  try{ if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission) DeviceOrientationEvent.requestPermission().catch(()=>{}); }catch(e){}
 }
 function disableScoring(){
   if(geoWatchId!=null && navigator.geolocation){ navigator.geolocation.clearWatch(geoWatchId); geoWatchId=null; }
   window.removeEventListener('devicemotion', onMotion); motionMag=0;
+  window.removeEventListener('deviceorientation', onOrientScore); levelKnown=false;
 }
 els.scoreBtn.addEventListener('click', async ()=>{
   if(!state.scoreMode){
