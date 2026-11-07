@@ -344,7 +344,7 @@
     box-shadow:inset 0 2px 3px #ffd9d2, 0 0 0 3px #7a1a14 !important}
 
   /* ============ DIRECT CRITIQUE FLASH ============ */
-  .crit{position:absolute; left:50%; bottom:150px; transform:translateX(-50%); z-index:5;
+  .crit{position:absolute; left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%); z-index:5;
     width:min(360px,88vw); display:none; flex-direction:column; gap:3px; pointer-events:none;
     background:linear-gradient(180deg,#120a2e,#0a0a1e); border:3px solid #36e0ff;
     box-shadow:0 0 14px #36e0ff55, 6px 6px 0 rgba(0,0,0,.5); font-family:var(--pixel); color:#fff; padding:10px 12px}
@@ -390,6 +390,25 @@
   .himsg.on{display:block}
   @keyframes hiPulse{50%{opacity:.5}}
 
+  /* ===== 8-bit GPS mini-map (live radar) ===== */
+  .maplabel{position:absolute; left:max(10px,env(safe-area-inset-left)); top:calc(env(safe-area-inset-top) + 78px);
+    font-family:var(--pixel); font-size:7px; color:#36e0ff; text-shadow:1px 1px 0 #000; z-index:4; display:none;
+    max-width:150px; line-height:1.4; pointer-events:none}
+  .maplabel.on{display:block}
+  .minimap{position:absolute; left:max(10px,env(safe-area-inset-left)); top:calc(env(safe-area-inset-top) + 94px);
+    width:140px; height:140px; image-rendering:pixelated; z-index:4; display:none; pointer-events:none;
+    border:3px solid #36e0ff; box-shadow:0 0 0 3px #07071a, 0 0 14px #36e0ff55; background:#0a0a1e}
+  .minimap.on{display:block}
+  @media (orientation:landscape) and (max-height:600px){
+    .maplabel{left:auto; right:128px; top:calc(env(safe-area-inset-top) + 6px)}
+    .minimap{left:auto; right:128px; top:calc(env(safe-area-inset-top) + 22px); width:112px; height:112px}
+  }
+  /* round-location map on the results screen */
+  .resmap{display:block; width:100%; max-width:300px; margin:8px auto 2px; image-rendering:pixelated;
+    border:3px solid #36e0ff; box-shadow:0 0 0 3px #07071a; background:#0a0a1e}
+  .results .loc{font-family:var(--pixel); font-size:8px; color:#36e0ff; text-align:center; letter-spacing:1px;
+    margin:3px 0; line-height:1.5}
+
   /* keep the photographer visible in landscape (center-bottom, clear of edge controls) */
   @media (orientation:landscape) and (max-height:600px){
     .top .tbtns{ padding-right:0; flex:none; justify-content:center }
@@ -417,6 +436,8 @@
     <div class="pop" id="hudPop"></div>
   </div>
   <div class="crit" id="crit"></div>
+  <div class="maplabel" id="mapLabel">LEVEL —</div>
+  <canvas class="minimap" id="minimap" width="140" height="140"></canvas>
   <canvas id="mascot" width="48" height="58"></canvas>
   <div class="level" id="level"><div class="lvref"></div><div class="lvline" id="lvline"></div></div>
 
@@ -433,6 +454,7 @@
       <button id="levelBtn">LEVEL</button>
       <button id="peakBtn">PEAK</button>
       <button id="scoreBtn">SCORE</button>
+      <button id="mapBtn">MAP</button>
       <button id="boardBtn">BOARD</button>
       <button id="sndBtn">SND</button>
     </div>
@@ -557,6 +579,8 @@
   <canvas class="fw" id="fw"></canvas>
   <h2 id="resTitle">ROUND COMPLETE</h2>
   <div class="stat" id="resStat">LEVEL — · 25 SHOTS</div>
+  <div class="loc" id="resLoc">📍 LOCATING…</div>
+  <canvas class="resmap" id="resMap" width="300" height="190"></canvas>
   <div class="big"><span id="resTotal">0</span><span class="rk" id="resRank">S</span></div>
   <div class="himsg" id="hiMsg">ALL YOUR SKILLS,<br>ARE BELONG TO YOU.</div>
   <div class="namerow">
@@ -654,6 +678,7 @@ const SCORE = {
 };
 let motionMag = 0, lastPos = null, geoWatchId = null, lastScore = null;
 let levelRoll = 0, levelKnown = false;      // device tilt for the level/horizon rule
+let geoPath = [], shotMarks = [], mapOn = false, placeName = '', geoRequested = false;  // GPS trail + 8-bit map
 let sessionTotal = 0, shotCount = 0, lastThumb = null;
 function rankFor(t){ return t>=1800?['S','s']: t>=1600?['A','a']: t>=1400?['B','']: t>=1200?['C','']: ['D','']; }
 
@@ -661,7 +686,9 @@ function rankFor(t){ return t>=1800?['S','s']: t>=1600?['A','a']: t>=1400?['B','
 const ROUND_MAX = 25;
 let roundShots = [], roundTotal = 0;
 let pendingRound = null, pendingSaved = true, fwRAF = 0;
-function startRound(){ roundShots = []; roundTotal = 0; updateHud(); els.hud.classList.add('on'); startMascot(); }
+function startRound(){ roundShots = []; roundTotal = 0; geoPath = (lastPos?[{lat:lastPos.lat,lng:lastPos.lng}]:[]); shotMarks = []; placeName=''; geoRequested=false;
+  if(lastPos) geocode(lastPos.lat,lastPos.lng);
+  updateHud(); els.hud.classList.add('on'); startMascot(); if(mapOn) drawMiniMap(); }
 function updateHud(){
   els.hudScore.textContent = roundTotal;
   els.hudShots.textContent = roundShots.length + '/' + ROUND_MAX;
@@ -708,6 +735,7 @@ function showCrit(res){
 function endScoring(){
   state.scoreMode = false; els.scoreBtn.classList.remove('on');
   els.hud.classList.remove('on'); els.crit.classList.remove('on'); stopMascot(); disableScoring();
+  mapOn=false; els.mapBtn.classList.remove('on'); els.minimap.classList.remove('on'); els.mapLabel.classList.remove('on');
 }
 function finishRound(){
   if(roundShots.length === 0){ endScoring(); return; }
@@ -728,6 +756,8 @@ function finishRound(){
     blobs:roundShots.map(s=>s.blob) };   // blobs kept in memory for SAVE ALL (not stored)
   pendingSaved = false;
   els.resName.value = (localStorage.getItem('mcam_name')||'').toUpperCase();
+  els.resLoc.textContent = locLine();
+  drawMap(els.resMap, geoPath, shotMarks, lastPos);
   els.results.classList.add('open');
   const isHigh = (rank==='S' || rank==='A' || total>prevBest);
   els.hiMsg.classList.toggle('on', isHigh);     // "ALL YOUR SKILLS, ARE BELONG TO YOU."
@@ -838,6 +868,61 @@ function onMotion(e){
   const m = Math.abs(a.x||0) + Math.abs(a.y||0) + Math.abs(a.z||0);
   // high-pass: deviation from the ~9.8 gravity baseline
   motionMag = Math.abs(m - 9.8) * 0.4 + motionMag * 0.6;
+}
+
+/* ---------- 8-bit GPS map (retro radar of where you walked + shot) ---------- */
+function drawMap(cv, path, marks, cur){
+  const W=cv.width, H=cv.height, g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+  g.fillStyle='#0a0a1e'; g.fillRect(0,0,W,H);
+  // retro grid
+  g.strokeStyle='rgba(54,224,255,0.16)'; g.lineWidth=1;
+  const gs=Math.max(8, Math.round(W/8));
+  for(let x=0;x<=W;x+=gs){ g.beginPath(); g.moveTo(x+0.5,0); g.lineTo(x+0.5,H); g.stroke(); }
+  for(let y=0;y<=H;y+=gs){ g.beginPath(); g.moveTo(0,y+0.5); g.lineTo(W,y+0.5); g.stroke(); }
+  const pts = path.concat(marks).concat(cur?[cur]:[]).filter(p=>p&&isFinite(p.lat));
+  if(!pts.length){
+    g.fillStyle='#36e0ff'; g.font='9px "Press Start 2P",monospace'; g.textAlign='center';
+    g.fillText('NO GPS', W/2, H/2); return;
+  }
+  let minLa=1e9,maxLa=-1e9,minLo=1e9,maxLo=-1e9;
+  pts.forEach(p=>{ minLa=Math.min(minLa,p.lat);maxLa=Math.max(maxLa,p.lat);minLo=Math.min(minLo,p.lng);maxLo=Math.max(maxLo,p.lng); });
+  const cLa=(minLa+maxLa)/2, cLo=(minLo+maxLo)/2;
+  let spanLa=Math.max(maxLa-minLa,0.0006)*1.4, spanLo=Math.max(maxLo-minLo,0.0006)*1.4;
+  const toXY=p=>[ ((p.lng-(cLo-spanLo/2))/spanLo)*W, H-((p.lat-(cLa-spanLa/2))/spanLa)*H ];
+  // walked trail
+  if(path.length>1){ g.strokeStyle='#5bff9d'; g.lineWidth=2; g.beginPath();
+    path.forEach((p,i)=>{ const [x,y]=toXY(p); i?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke(); }
+  // shot markers (yellow)
+  marks.forEach(p=>{ const [x,y]=toXY(p); g.fillStyle='#ffe14d'; g.fillRect((x|0)-2,(y|0)-2,5,5);
+    g.fillStyle='#c0392b'; g.fillRect((x|0),(y|0),1,1); });
+  // current position = tiny 8-bit character (fedora + shades)
+  if(cur){ const [x,y]=toXY(cur); const X=x|0, Y=y|0;
+    g.fillStyle='#e3b48a'; g.fillRect(X-3,Y-2,6,5);     // face
+    g.fillStyle='#0a0a0a'; g.fillRect(X-4,Y-4,8,2);     // fedora brim
+    g.fillStyle='#101012'; g.fillRect(X-2,Y-6,4,2);     // crown
+    g.fillStyle='#090909'; g.fillRect(X-3,Y-1,6,2);     // shades
+  }
+}
+function drawMiniMap(){
+  if(!els.minimap) return;
+  drawMap(els.minimap, geoPath, shotMarks, lastPos);
+  const lvl = levelForPosition(lastPos);
+  els.mapLabel.textContent = lvl.name + (placeName ? ('\n'+placeName.toUpperCase()) : '');
+  els.mapLabel.style.whiteSpace='pre';
+}
+// best-effort reverse geocode (OpenStreetMap) -> a place name for the level; falls back to coords
+async function geocode(lat,lng){
+  if(geoRequested) return; geoRequested=true;
+  try{
+    const r = await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&lat='+lat+'&lon='+lng);
+    const j = await r.json(); const a = j.address||{};
+    placeName = (a.neighbourhood||a.suburb||a.city_district||a.city||a.town||a.village||a.county||j.name||'').toString();
+    if(mapOn) drawMiniMap();
+  }catch(e){ /* offline / blocked — coords are still shown */ }
+}
+function locLine(){
+  const coords = lastPos ? (lastPos.lat.toFixed(4)+', '+lastPos.lng.toFixed(4)) : 'NO GPS SIGNAL';
+  return '📍 ' + (placeName ? placeName.toUpperCase()+' · ' : '') + coords;
 }
 
 // turn a GPS fix into a repeatable "Level" (grid cell, numbered in discovery order)
@@ -1048,6 +1133,7 @@ const els = {
   results:el('results'), resTitle:el('resTitle'), resStat:el('resStat'), resTotal:el('resTotal'),
   resRank:el('resRank'), resGrid:el('resGrid'), resAgain:el('resAgain'), resBoard:el('resBoard'),
   resName:el('resName'), resSaveAll:el('resSaveAll'), fw:el('fw'), hiMsg:el('hiMsg'),
+  mapBtn:el('mapBtn'), minimap:el('minimap'), mapLabel:el('mapLabel'), resMap:el('resMap'), resLoc:el('resLoc'),
   sprite:el('sprite'), crit:el('crit'), mascot:el('mascot'), sndBtn:el('sndBtn'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
@@ -1662,7 +1748,9 @@ function doCapture(){
   g.uniform1f(b.uni.peaking, 0);   // never bake peaking into the saved photo
   setUniforms(g, b.uni, exposure(), true);
   g.drawArrays(g.TRIANGLE_STRIP,0,4);
-  if(state.scoreMode){ lastScore = computeScore(off); lastThumb = makeThumb(off); } else { lastScore = null; }
+  if(state.scoreMode){ lastScore = computeScore(off); lastThumb = makeThumb(off);
+    if(lastPos){ shotMarks.push({lat:lastPos.lat,lng:lastPos.lng}); if(mapOn) drawMiniMap(); }
+  } else { lastScore = null; }
   const fmt = state.imgFormat==='png' ? 'image/png' : 'image/jpeg';
   const ext = state.imgFormat==='png' ? 'png' : 'jpg';
   off.toBlob(bl=>{
@@ -2106,8 +2194,12 @@ async function enableScoring(){
   if(navigator.geolocation){
     try{
       geoWatchId = navigator.geolocation.watchPosition(
-        p=>{ lastPos = { lat:p.coords.latitude, lng:p.coords.longitude }; },
-        ()=>{}, { enableHighAccuracy:false, maximumAge:30000, timeout:15000 });
+        p=>{ lastPos = { lat:p.coords.latitude, lng:p.coords.longitude };
+             const last = geoPath[geoPath.length-1];
+             if(!last || Math.hypot(last.lat-lastPos.lat, last.lng-lastPos.lng) > 0.00003) geoPath.push({lat:lastPos.lat,lng:lastPos.lng});
+             if(!geoRequested) geocode(lastPos.lat, lastPos.lng);
+             if(mapOn) drawMiniMap(); },
+        ()=>{}, { enableHighAccuracy:true, maximumAge:10000, timeout:15000 });
     }catch(e){}
   }
   // listen for motion ("in motion" rule) and orientation ("level" rule).
@@ -2133,6 +2225,13 @@ els.scoreBtn.addEventListener('click', async ()=>{
   } else {
     finishRound();   // end the round early and show results
   }
+});
+els.mapBtn.addEventListener('click', ()=>{
+  mapOn = !mapOn;
+  els.mapBtn.classList.toggle('on', mapOn);
+  els.minimap.classList.toggle('on', mapOn);
+  els.mapLabel.classList.toggle('on', mapOn);
+  if(mapOn){ drawMiniMap(); toast(lastPos ? 'Map on' : 'Map on · waiting for GPS'); }
 });
 els.boardBtn.addEventListener('click', openBoard);
 els.boardClose.addEventListener('click', async ()=>{
