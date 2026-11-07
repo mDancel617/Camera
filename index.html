@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="M-Cam">
+<meta name="apple-mobile-web-app-title" content="Photo Master">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
-<title>M-Cam</title>
+<title>Photo Master</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;500&display=swap">
@@ -267,6 +267,7 @@
   .overlay button{font-family:var(--pixel) !important; font-weight:400 !important; font-size:13px !important;
     letter-spacing:1px !important; border-radius:0 !important; background:#36e0ff !important; color:#07071a !important;
     box-shadow:5px 5px 0 #0a7d5a; padding:16px 26px !important}
+  .overlay h1.pm{line-height:1.5; font-size:30px !important}
   .overlay .coin{font-family:var(--pixel); font-size:7px; letter-spacing:1px; color:#ff5df2; animation:blink2 1.2s steps(2,start) infinite}
   @keyframes blink2{50%{opacity:.25}}
 
@@ -579,8 +580,7 @@
 
 <div class="overlay" id="overlay">
   <canvas id="sprite" width="48" height="58"></canvas>
-  <h1>M·CAM</h1>
-  <div class="tag">◂ PHOTO SAFARI ▸</div>
+  <h1 class="pm">PHOTO<br>MASTER</h1>
   <p id="ovText" hidden></p>
   <button id="startBtn">Let's Cook!</button>
   <div class="coin">★ THIRDS · GOLDEN RATIO · HI-SCORE ★</div>
@@ -645,6 +645,7 @@ const state = {
 const SCORE = {
   start: 1000, up: 200, down: 300,
   goldenUp: 500,                      // golden-ratio point / spiral eye bonus
+  dup: 500, dupBits: 40, dupPos: 0.08,  // duplicate penalty: similar fingerprint (of 256) AND subject in same spot
   blur: 14, focus: 26, sharp: 90,     // Laplacian-variance thresholds
   dark: 0.20, bright: 0.82,           // mean-luminance bounds
   motion: 2.2,                        // device accel delta (m/s^2) = "in motion"
@@ -670,7 +671,21 @@ function flashPop(v){
 }
 function addRoundShot(blob){
   if(!lastScore) return;
-  roundShots.push({ thumb:lastThumb, total:lastScore.total, blob, level:lastScore.levelName });
+  // duplicate / similar-photo penalty: similar fingerprint AND subject in nearly the same spot
+  const h = lastScore.hash, cx = lastScore.cx, cy = lastScore.cy;
+  if(h){
+    for(const s of roundShots){
+      const sameFrame = s.hash && hamming(s.hash, h) <= SCORE.dupBits;
+      const samePlace = Math.hypot((s.cx||0)-cx, (s.cy||0)-cy) < SCORE.dupPos;
+      if(sameFrame && samePlace){
+        lastScore.total -= SCORE.dup;
+        lastScore.neg.push(['Duplicate / similar', -SCORE.dup]);
+        (lastScore.tips = lastScore.tips || []).unshift('Too similar to an earlier shot — change subject or angle');
+        break;
+      }
+    }
+  }
+  roundShots.push({ thumb:lastThumb, total:lastScore.total, blob, level:lastScore.levelName, hash:h, cx, cy });
   roundTotal += lastScore.total;
   updateHud(); flashPop(lastScore.total); showCrit(lastScore);
   const rk = rankFor(lastScore.total)[0];
@@ -770,6 +785,16 @@ function playTune(seq, bpm, lead){
 // bright, lively opening riff
 const TUNE_OPEN = [[523,1],[659,1],[784,1],[1047,2],[784,1],[1047,1],[1319,2],
                    [1175,1],[1047,1],[880,1],[784,1],[1047,1],[784,3]];
+// play the opening song the instant the app can — immediately if allowed, else on the first touch
+let openingPlayed = false;
+function playOpening(){ if(openingPlayed || state.muted) return; openingPlayed = true; playTune(TUNE_OPEN, 152); }
+function armOpeningMusic(){
+  audio();
+  if(actx && actx.state === 'running'){ playOpening(); return; }   // autoplay allowed (e.g. installed app)
+  const go = ()=>{ audio(); playOpening(); off(); };
+  const off = ()=>['pointerdown','touchstart','mousedown','keydown','click'].forEach(ev=>window.removeEventListener(ev,go,true));
+  ['pointerdown','touchstart','mousedown','keydown','click'].forEach(ev=>window.addEventListener(ev,go,true));
+}
 // triumphant leaderboard theme
 const TUNE_END  = [[784,1],[659,1],[523,2],[587,1],[659,1],[784,2],
                    [880,1],[784,1],[1047,2],[784,1],[1047,1],[1319,3]];
@@ -834,6 +859,18 @@ function saveLevelBest(res){
     localStorage.setItem('mcam_levels', JSON.stringify(store));
   }catch(e){}
 }
+
+// 16x16 average-hash (perceptual fingerprint) for duplicate / similar detection
+function aHash(canvas){
+  const s=16, N=s*s, c=document.createElement('canvas'); c.width=s; c.height=s;
+  const x=c.getContext('2d'); x.drawImage(canvas,0,0,s,s);
+  const d=x.getImageData(0,0,s,s).data; const g=new Array(N); let sum=0;
+  for(let i=0;i<N;i++){ const y=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2]; g[i]=y; sum+=y; }
+  const mean=sum/N; let bits='';
+  for(let i=0;i<N;i++) bits += (g[i]>=mean?'1':'0');
+  return bits;
+}
+function hamming(a,b){ let n=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) n++; return n; }
 
 // analyze a rendered photo canvas -> score result
 function computeScore(canvas){
@@ -931,7 +968,7 @@ function computeScore(canvas){
   let total = SCORE.start;
   pos.forEach(p=>total+=p[1]); neg.forEach(p=>total+=p[1]);
   const lvl = levelForPosition(lastPos);
-  const res = { total, pos, neg, tips, dotsHit, levelName:lvl.name, levelBest:lvl.best,
+  const res = { total, pos, neg, tips, dotsHit, hash:aHash(canvas), cx, cy, levelName:lvl.name, levelBest:lvl.best,
                 levelKey:lvl.key, levelStore:lvl.store, thumbURL };
   saveLevelBest(res);
   res.levelBest = Math.max(res.levelBest, total);
@@ -1945,7 +1982,7 @@ function mascotReact(rank){
 
 els.startBtn.addEventListener('click', ()=>{
   audio(); sfxShutter();                   // unlock sound + shutter click
-  playTune(TUNE_OPEN, 152);                // retro opening song
+  playOpening();                           // opening song (if not already playing)
   spriteFlash = 1;                         // he takes the shot
   els.startBtn.disabled = true;
   setTimeout(()=>{ cancelAnimationFrame(spriteRAF); start(); }, 480);
@@ -2138,6 +2175,7 @@ if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
   els.ovText.textContent='This browser can\'t open the camera. Use Safari on iPhone, opened over an https link.';
   els.startBtn.disabled=true;
 }
+armOpeningMusic();   // begin the opening song as soon as the app is allowed to make sound
 </script>
 </body>
 </html>
