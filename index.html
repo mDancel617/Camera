@@ -333,7 +333,7 @@
 
   /* ===== CAMERA SHOP ===== */
   .shop{position:absolute; inset:0; z-index:11; display:none; flex-direction:column; align-items:center;
-    overflow-y:auto; padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+    overflow-y:auto; overscroll-behavior:none; -webkit-overflow-scrolling:touch; padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 20px);
     background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px), linear-gradient(180deg,#201436,#07071a);
     font-family:var(--pixel); color:#fff}
   .shop.on{display:flex}
@@ -380,9 +380,30 @@
   .shopback{all:unset; cursor:pointer; text-align:center; font-family:var(--pixel); font-size:9px; color:#9fb4e6;
     border:1px solid #39407a; padding:11px; border-radius:3px}
 
+  /* ===== cleaner top bar: MENU dropdown + bigger score ===== */
+  .top{ justify-content:flex-start !important; gap:8px }
+  .top .tbtns{ flex:0 1 auto !important; justify-content:flex-start !important; padding-right:0 !important; gap:7px !important }
+  #menuBtn.on{ color:#07071a !important; background:linear-gradient(180deg,#36e0ff,#17b3d6) !important; border-color:#0a7d9a !important }
+  .menupanel{ position:absolute; top:calc(env(safe-area-inset-top) + 58px); left:max(10px,env(safe-area-inset-left)); z-index:6;
+    display:none; flex-direction:column; gap:5px; width:150px; padding:8px;
+    background:rgba(8,7,26,.94); border:1px solid #39407a; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.6) }
+  .menupanel.open{ display:flex }
+  .menupanel button{ all:unset; cursor:pointer; font-family:var(--pixel); font-size:8px; letter-spacing:.5px; color:#9fb4e6;
+    background:linear-gradient(180deg,#1b2140,#11152b); border:1px solid #39407a; padding:9px 8px; border-radius:4px; text-align:center }
+  .menupanel button.on{ color:#07071a; background:linear-gradient(180deg,#ffe14d,#f2b300); border-color:#b3820a }
+  .hud{ padding:6px 11px }
+  .hud .sc{ font-size:36px !important }
+  .hud .sh{ font-size:9px !important }
+  .hud .cmb{ font-size:11px !important }
+  @media (orientation:landscape) and (max-height:600px){
+    .menupanel{ top:auto; bottom:6px; left:max(10px,env(safe-area-inset-left)); max-height:92vh; overflow-y:auto }
+    #stage.lh .menupanel{ left:auto; right:max(10px,env(safe-area-inset-right)) }
+    .hud .sc{ font-size:30px !important }
+  }
+
   /* ===== HOME / LOADOUT hub ===== */
   .home{position:absolute; inset:0; z-index:11; display:none; flex-direction:column; align-items:center;
-    overflow-y:auto; padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 16px);
+    overflow-y:auto; overscroll-behavior:none; -webkit-overflow-scrolling:touch; padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 20px);
     background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px), linear-gradient(180deg,#141036,#07071a);
     font-family:var(--pixel); color:#fff}
   .home.on{display:flex}
@@ -495,9 +516,9 @@
 
   /* ============ ROUND RESULTS + LEADERBOARD ============ */
   .results{position:absolute; inset:0; z-index:8; display:none; flex-direction:column;
-    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:none;
     background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.2) 2px 3px), linear-gradient(180deg,#1a0b3a,#07071a);
-    font-family:var(--pixel); color:#fff; padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 14px)}
+    font-family:var(--pixel); color:#fff; padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 28px)}
   .results.open{display:flex}
   .results h2{font-size:15px; color:#ffe14d; text-align:center; text-shadow:3px 3px 0 #c0392b; margin:2px 0}
   .results .stat{text-align:center; font-size:9px; color:#36e0ff; letter-spacing:1px; margin-bottom:2px}
@@ -566,8 +587,8 @@
 
   .hud{ gap:2px; background:rgba(8,7,26,.5); border:1px solid #39407a; border-radius:6px;
     padding:5px 9px; box-shadow:0 0 10px rgba(0,0,0,.45) }
-  .hud .sc{ font-size:26px !important; color:#ffe14d; text-shadow:2px 2px 0 #c0392b, 0 0 10px #ffe14d66 }
-  .hud .sh{ font-size:8px !important }
+  .hud .sc{ font-size:36px !important; color:#ffe14d; text-shadow:2px 2px 0 #c0392b, 0 0 10px #ffe14d66 }
+  .hud .sh{ font-size:9px !important }
 
   /* name entry + save-all + fireworks on the results screen */
   .results .namerow{display:flex; align-items:center; justify-content:center; gap:8px; margin:2px 0}
@@ -640,22 +661,25 @@
   <div class="top">
     <div class="mode" id="modeTag">PRO</div>
     <div class="tbtns">
-      <button id="modeBtn">PHOTO</button>
-      <button id="flipBtn">FLIP</button>
-      <button id="lensBtn">1×</button>
-      <button id="torchBtn">FLASH</button>
-      <button id="gridBtn">GRID</button>
-      <button id="timerBtn">T:OFF</button>
-      <button id="lockBtn">AE-L</button>
-      <button id="levelBtn">LEVEL</button>
-      <button id="peakBtn">PEAK</button>
+      <button id="menuBtn">☰ MENU</button>
       <button id="scoreBtn">SCORE</button>
-      <button id="mapBtn">MAP</button>
       <button id="homeCamBtn">🏠 HOME</button>
-      <button id="boardBtn">BOARD</button>
-      <button id="sndBtn">SND</button>
     </div>
     <div class="look" id="lookTag">CLASSIC</div>
+  </div>
+  <div class="menupanel" id="menuPanel">
+    <button id="modeBtn">PHOTO</button>
+    <button id="flipBtn">FLIP</button>
+    <button id="lensBtn">1×</button>
+    <button id="torchBtn">FLASH</button>
+    <button id="gridBtn">GRID</button>
+    <button id="timerBtn">T:OFF</button>
+    <button id="lockBtn">AE-L</button>
+    <button id="levelBtn">LEVEL</button>
+    <button id="peakBtn">PEAK</button>
+    <button id="mapBtn">MAP</button>
+    <button id="boardBtn">BOARD</button>
+    <button id="sndBtn">SND</button>
   </div>
 
   <div class="flash" id="flash"></div>
@@ -1523,6 +1547,7 @@ const els = {
   homeBtn:el('homeBtn'), resHome:el('resHome'), home:el('home'), homeChar:el('homeChar'), homeName:el('homeName'),
   homeAch:el('homeAch'), homeCam:el('homeCam'), homeFeat:el('homeFeat'), homeBag:el('homeBag'),
   homeShoot:el('homeShoot'), homeShop:el('homeShop'), homeBack:el('homeBack'), homeCamBtn:el('homeCamBtn'),
+  menuBtn:el('menuBtn'), menuPanel:el('menuPanel'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
   soft:el('soft'), softVal:el('softVal'), fmtSel:el('fmtSel'), qual:el('qual'), qualVal:el('qualVal'),
   modeBtn:el('modeBtn'), resSel:el('resSel'), rescanBtn:el('rescanBtn'),
@@ -2718,6 +2743,10 @@ els.mapBtn.addEventListener('click', ()=>{
   if(mapOn){ drawMiniMap(); toast(lastPos ? 'Map on' : 'Map on · waiting for GPS'); }
 });
 els.crit.addEventListener('click', ()=> els.crit.classList.remove('on'));
+// ☰ dropdown menu for the secondary camera controls
+els.menuBtn && els.menuBtn.addEventListener('click', ()=>{ const open=els.menuPanel.classList.toggle('open'); els.menuBtn.classList.toggle('on', open); });
+// tapping a control inside the menu closes it (keeps things tidy); toggles keep their own .on state
+els.menuPanel && els.menuPanel.addEventListener('click', e=>{ if(e.target.closest('button')) setTimeout(()=>{ els.menuPanel.classList.remove('open'); els.menuBtn.classList.remove('on'); }, 120); });
 els.boardBtn.addEventListener('click', openBoard);
 els.boardClose.addEventListener('click', async ()=>{
   commitRound(); stopFireworks();
@@ -3064,7 +3093,9 @@ const SHOPS = [
     cams:['ricoh','x100','lumix'], films:[11,12], need:7, staffColors:{skin:'#e8c49a',hair:'#101010',apron:'#3a3a8a'} },
 ];
 function trophyCount(){ try{ return (typeof achGot==='function') ? achGot().length : 0; }catch(e){ return 0; } }
-function shopUnlocked(s){ return trophyCount() >= s.need; }
+// a shop unlocks only when you own EVERY camera in the previous shop
+function camsAllOwned(cams){ const own=ownedCams(); return cams.every(id=>own.indexOf(id)>=0); }
+function shopUnlocked(s){ if(s.id===0) return true; const prev=SHOPS[s.id-1]; return prev ? camsAllOwned(prev.cams) : true; }
 // apply the equipped camera's shooting features to the live camera UI
 function applyCameraFeatures(){
   const locked = camLensLocked();
@@ -3133,6 +3164,19 @@ function drawWorker(c, x, y, t){
   c.fillStyle='#d0a884'; c.fillRect(x-2,y+9-lift,3,7); c.fillRect(x+13,y+9-lift,3,7); // arms reaching up/down
   c.fillStyle='#111'; c.fillRect(x+14,y+6-lift,6,4);                       // camera being placed
 }
+// a customer browsing the shop (bobs, shifts, looks around)
+function drawCustomer(c, x, y, t, col){
+  const bob=Math.round(Math.sin(t*1.6)*1);
+  const step=Math.round(Math.sin(t*0.8)*2);
+  const look=Math.round(Math.sin(t*0.5)*1);
+  c.fillStyle=col[0]; c.fillRect(x+3+look,y+bob,8,8);                      // head
+  c.fillStyle=col[2]||'#2a2a2a'; c.fillRect(x+2+look,y-2+bob,10,4);        // hair
+  c.fillStyle=col[1]; c.fillRect(x+step,y+8,14,13);                       // torso
+  c.fillStyle='#23262e'; c.fillRect(x+2+step,y+21,4,8); c.fillRect(x+8+step,y+21,4,8); // legs
+  c.fillStyle=col[0]; c.fillRect(x-1+step,y+9,3,8); c.fillRect(x+12+step,y+9,3,8);     // arms
+}
+const CUST_COLS=[['#e3b48a','#b23a4a','#2a2a2a'],['#caa27a','#2e6b8a','#4a3a2a'],['#e8c49a','#3a7a4a','#101010'],
+  ['#d0a884','#7a4a8a','#5a3a2a'],['#f0c6a0','#c87a2a','#1a1a1a'],['#c88a58','#3a4a8a','#0a0a0a']];
 function drawShopScene(){
   const cv=els.shopScene; if(!cv) return; const c=cv.getContext('2d'); const W=cv.width,H=cv.height;
   c.imageSmoothingEnabled=false; c.clearRect(0,0,W,H);
@@ -3140,11 +3184,15 @@ function drawShopScene(){
   c.fillStyle='#5a4028'; for(let sy=14; sy<80; sy+=22){ c.fillRect(10,sy,W-20,4); }   // shelves
   const cols=['#b23a2a','#1c1c1e','#2a2a2c','#121212','#2b2f3a'];
   for(let sy=16, k=0; sy<78; sy+=22){ for(let sx=18; sx<W-24; sx+=30){ c.fillStyle=cols[k++%cols.length]; c.fillRect(sx,sy-9,16,8); c.fillStyle='#8fd'; c.fillRect(sx+5,sy-7,5,4);} }
-  // background worker restocking (upper-left shelf area)
-  drawWorker(c, 70, 20, shopT+2);
+  // the shop gets busier as you unlock higher tiers — more workers restocking
+  const tier=(typeof curShop!=='undefined')?curShop:0;
+  const workerN=1+tier;                                    // 1 → 4 workers
+  for(let i=0;i<workerN;i++){ drawWorker(c, 54 + i*56, 18 + (i%2)*5, shopT + i*1.3); }
   // counter
   c.fillStyle='#2a1a0e'; c.fillRect(0,H-34,W,34);
   c.fillStyle='#6a4a2a'; c.fillRect(0,H-36,W,4);
+  // customers browsing in the aisle, in front of the counter (0 → 3, busier shops)
+  for(let i=0;i<tier;i++){ drawCustomer(c, 92 + i*56, H-52, shopT + i*2.1, CUST_COLS[i%CUST_COLS.length]); }
   // shopkeeper behind counter (right) — colours vary per shop
   const S=(typeof SHOPS!=='undefined')?SHOPS[curShop]:null;
   drawShopkeeper(c, W-70, H-78, shopT, S&&S.staffColors);
@@ -3173,10 +3221,10 @@ function shopSay(msg){ if(els.shopBubble) els.shopBubble.textContent=msg; }
 function renderShopSelector(){
   if(!els.shopSel) return; els.shopSel.innerHTML='';
   SHOPS.forEach(s=>{
-    const ok=shopUnlocked(s); const b=document.createElement('button');
+    const ok=shopUnlocked(s); const prev=SHOPS[s.id-1]; const b=document.createElement('button');
     b.className='ssh'+(s.id===curShop?' sel':'')+(ok?'':' lock');
-    b.textContent = ok ? s.name : ('🔒 '+s.need+'🏆');
-    b.onclick=()=>{ if(!ok){ shopSay('Earn '+s.need+' trophies to unlock '+s.name+'.'); return; } curShop=s.id; shopSay(s.tip); renderShop(); if(!state.muted){audio();beep(640,0.05,'square',0.05);} };
+    b.textContent = ok ? s.name : '🔒 '+s.name;
+    b.onclick=()=>{ if(!ok){ shopSay('Buy every camera in '+(prev?prev.name:'the previous shop')+' to unlock '+s.name+'.'); return; } curShop=s.id; shopSay(s.tip); renderShop(); if(!state.muted){audio();beep(640,0.05,'square',0.05);} };
     els.shopSel.appendChild(b);
   });
 }
