@@ -1622,6 +1622,8 @@ uniform sampler2D tex;
 uniform int uLook;
 uniform float uExpose, uWB, uIntensity, uGrain, uVignette, uSeed;
 uniform float uContrast, uSaturation, uSoften, uPeaking;
+uniform vec3 uCamGain, uCamLift, uCamHi;              // per-camera colour science
+uniform float uCamContrast, uCamSat, uCamWarm, uCamTint, uCamFilmic;
 uniform float uAperture, uAspect;
 uniform vec2 uFocus, uRes;
 uniform bool uFlip, uUseLut, uFastBlur;
@@ -1706,6 +1708,21 @@ vec3 builtinLook(vec3 c, int lk){
   return clamp(c,0.0,1.0);
 }
 
+// ---- per-camera colour science (Canon warmth, Nikon punch, Sony neutral, Leica contrast, …) ----
+vec3 cameraGrade(vec3 c){
+  c.r *= 1.0 + uCamWarm; c.b *= 1.0 - uCamWarm;      // warmth (orange ↔ blue)
+  c.g *= 1.0 + uCamTint;                              // tint (green ↔ magenta)
+  c *= uCamGain;                                      // channel gain (the "science")
+  float l = dot(clamp(c,0.0,1.0), vec3(0.2126,0.7152,0.0722));
+  c += uCamLift * (1.0 - l);                          // shadow tint (e.g. teal shadows)
+  c += uCamHi * l;                                    // highlight tint (e.g. warm highlights)
+  c = (c - 0.5) * uCamContrast + 0.5;                // micro-contrast
+  float lg = dot(clamp(c,0.0,1.0), vec3(0.2126,0.7152,0.0722));
+  c = mix(vec3(lg), c, uCamSat);                      // saturation character
+  if(uCamFilmic > 0.0) c = mix(c, 1.0 - exp(-max(c,0.0)*1.5), uCamFilmic);   // filmic highlight rolloff
+  return clamp(c, 0.0, 1.0);
+}
+
 void main(){
   vec2 st = uv;
   if(uFlip) st.x = 1.0 - st.x;
@@ -1761,6 +1778,7 @@ void main(){
   // film look via LUT (table lookup) — more accurate than per-channel math
   vec3 look = uUseLut ? lutSample(pre) : builtinLook(pre, uLook);
   c = mix(pre, look, uIntensity);   // look strength (does not touch exposure)
+  c = cameraGrade(c);               // the camera body's own colour rendering
 
   // color tools: contrast + saturation on top of the look
   c = clamp((c - 0.5) * uContrast + 0.5, 0.0, 1.0);
@@ -1817,7 +1835,10 @@ function buildProgram(g){
     seed:u('uSeed'), flip:u('uFlip'),
     aperture:u('uAperture'), aspect:u('uAspect'), focus:u('uFocus'), res:u('uRes'),
     lutN:u('uLutN'), lutRows:u('uLutRows'), useLut:u('uUseLut'), fastBlur:u('uFastBlur'),
-    contrast:u('uContrast'), saturation:u('uSaturation'), soften:u('uSoften'), peaking:u('uPeaking')
+    contrast:u('uContrast'), saturation:u('uSaturation'), soften:u('uSoften'), peaking:u('uPeaking'),
+    camGain:u('uCamGain'), camLift:u('uCamLift'), camHi:u('uCamHi'),
+    camContrast:u('uCamContrast'), camSat:u('uCamSat'), camWarm:u('uCamWarm'),
+    camTint:u('uCamTint'), camFilmic:u('uCamFilmic')
   }};
 }
 
@@ -1856,9 +1877,8 @@ function exposure(){
 }
 
 function setUniforms(g, u, expo, forCapture){
-  const cg = (typeof camGrade==='function') ? camGrade() : {contrast:1, warmth:0};
   g.uniform1f(u.expose, expo.expose);
-  g.uniform1f(u.wb, state.wb + (cg.warmth||0));
+  g.uniform1f(u.wb, state.wb);                 // user white-balance only
   g.uniform1f(u.intensity, state.intensity);
   g.uniform1f(u.grain, expo.grain);
   g.uniform1f(u.vignette, expo.vignette);
@@ -1867,9 +1887,20 @@ function setUniforms(g, u, expo, forCapture){
   g.uniform1f(u.aperture, expo.blur);
   g.uniform2f(u.focus, state.focusUV.x, state.focusUV.y);
   g.uniform1i(u.fastBlur, (recording && state.recRes==='4k') ? 1 : 0);  // lighter blur only while recording 4K
-  g.uniform1f(u.contrast, state.contrast * (cg.contrast||1));
+  g.uniform1f(u.contrast, state.contrast);     // user contrast only
   g.uniform1f(u.saturation, state.saturation);
   g.uniform1f(u.soften, state.soften);
+  // --- per-camera "look": the body's own colour rendering ---
+  const L = (typeof camGrade==='function') ? camGrade() : null;
+  const gain = (L&&L.gain)||[1,1,1], lift=(L&&L.lift)||[0,0,0], hi=(L&&L.hi)||[0,0,0];
+  g.uniform3f(u.camGain, gain[0], gain[1], gain[2]);
+  g.uniform3f(u.camLift, lift[0], lift[1], lift[2]);
+  g.uniform3f(u.camHi,   hi[0],   hi[1],   hi[2]);
+  g.uniform1f(u.camContrast, (L&&L.contrast)||1);
+  g.uniform1f(u.camSat,      (L&&L.sat!=null)?L.sat:1);
+  g.uniform1f(u.camWarm,     (L&&L.warm)||0);
+  g.uniform1f(u.camTint,     (L&&L.tint)||0);
+  g.uniform1f(u.camFilmic,   (L&&L.filmic)||0);
 }
 
 function render(){
@@ -3056,29 +3087,29 @@ function refreshCreditsUI(){
 
 /* ---- cameras (bodies) — each has a perk, a base LOOK grade, and shooting features ---- */
 var CAMERAS = [
-  { id:'basic', name:'STARTER DIGICAM', cost:0,    desc:'Your trusty starter. No frills, always reliable.', perk:{}, body:'#2b2f3a', lens:'#39c', grade:{contrast:1.00,warmth:0,feat:'Balanced digital · all lenses'} },
-  { id:'canon', name:'CANON',           cost:1500, desc:'Warm, flattering colour science. Vivid-colour bonus is easier.', perk:{color:0.06}, body:'#b23a2a', lens:'#e8c84d', grade:{contrast:1.03,warmth:2.5,feat:'Warm colour science · all lenses'} },
-  { id:'nikon', name:'NIKON',           cost:2800, desc:'Crisp, detailed rendering. The Sharp bonus comes easier.', perk:{sharp:25}, body:'#1c1c1e', lens:'#ffe14d', grade:{contrast:1.08,warmth:0,feat:'Crisp & punchy · all lenses'} },
-  { id:'sony',  name:'SONY',            cost:4500, desc:'Superb dynamic range & AF. Wider good-exposure range.', perk:{dark:0.05,bright:0.05}, body:'#2a2a2c', lens:'#ff8a3a', grade:{contrast:1.00,warmth:-1.5,feat:'Clean, cool · wide range · all lenses'} },
-  { id:'leica', name:'LEICA',           cost:9000, desc:'The legend. 35mm prime only, higher contrast, +15% score.', perk:{mult:1.15}, body:'#121212', lens:'#c8102e', grade:{contrast:1.22,warmth:0.5,feat:'35mm prime only · higher contrast'} },
+  { id:'basic', name:'STARTER DIGICAM', cost:0,    desc:'Your trusty starter. No frills, always reliable.', perk:{}, body:'#2b2f3a', lens:'#39c', look:{gain:[1,1,1],lift:[0,0,0],hi:[0,0,0],contrast:1,sat:1,warm:0,tint:0,filmic:0,feat:'Balanced digital · all lenses'} },
+  { id:'canon', name:'CANON',           cost:1500, desc:'Warm, flattering colour science. Vivid-colour bonus is easier.', perk:{color:0.06}, body:'#b23a2a', lens:'#e8c84d', look:{gain:[1.05,1.0,0.96],lift:[0.0,0.0,0.0],hi:[0.04,0.02,0.0],contrast:1.05,sat:1.08,warm:0.05,tint:0.0,filmic:0.10,feat:'Warm colour science · all lenses'} },
+  { id:'nikon', name:'NIKON',           cost:2800, desc:'Crisp, detailed rendering. The Sharp bonus comes easier.', perk:{sharp:25}, body:'#1c1c1e', lens:'#ffe14d', look:{gain:[1.02,1.03,1.0],lift:[0,0,0],hi:[0,0,0],contrast:1.14,sat:1.18,warm:0.0,tint:-0.01,filmic:0.05,feat:'Crisp & punchy · all lenses'} },
+  { id:'sony',  name:'SONY',            cost:4500, desc:'Superb dynamic range & AF. Wider good-exposure range.', perk:{dark:0.05,bright:0.05}, body:'#2a2a2c', lens:'#ff8a3a', look:{gain:[0.99,1.01,1.03],lift:[0,0,0],hi:[0,0,0],contrast:0.98,sat:0.95,warm:-0.03,tint:0.02,filmic:0.0,feat:'Clean, cool · wide range · all lenses'} },
+  { id:'leica', name:'LEICA',           cost:9000, desc:'The legend. 35mm prime only, higher contrast, +15% score.', perk:{mult:1.15}, body:'#121212', lens:'#c8102e', look:{gain:[1.0,0.99,1.01],lift:[0,0,0.02],hi:[0,0,0],contrast:1.22,sat:1.05,warm:-0.02,tint:0.0,filmic:0.30,feat:'35mm prime only · higher contrast'} },
   // RETRO RELICS
-  { id:'fuji',  name:'FUJIFILM',        cost:3200, desc:'Gorgeous film-simulation colour straight out of camera.', perk:{color:0.07}, body:'#3a3a3f', lens:'#5bd', grade:{contrast:1.06,warmth:1.5,feat:'Film-sim colour · all lenses'} },
-  { id:'olympus',name:'OLYMPUS',        cost:4200, desc:'Tiny, sharp micro-four-thirds. Great detail.', perk:{sharp:20}, body:'#d8d2c4', lens:'#39c', grade:{contrast:1.05,warmth:0.5,feat:'Compact & crisp · all lenses'} },
-  { id:'rollei',name:'ROLLEIFLEX',      cost:7000, desc:'Dreamy twin-lens square look. +10% score.', perk:{mult:1.10}, body:'#26201a', lens:'#cfc9b0', grade:{contrast:1.12,warmth:1.0,feat:'Dreamy square render'} },
+  { id:'fuji',  name:'FUJIFILM',        cost:3200, desc:'Gorgeous film-simulation colour straight out of camera.', perk:{color:0.07}, body:'#3a3a3f', lens:'#5bd', look:{gain:[1.02,1.04,1.02],lift:[0,0.03,0.02],hi:[0.02,0.01,0.0],contrast:1.08,sat:1.15,warm:0.03,tint:0.03,filmic:0.15,feat:'Film-sim colour · all lenses'} },
+  { id:'olympus',name:'OLYMPUS',        cost:4200, desc:'Tiny, sharp micro-four-thirds. Great detail.', perk:{sharp:20}, body:'#d8d2c4', lens:'#39c', look:{gain:[1.0,1.02,1.08],lift:[0,0,0],hi:[0,0,0],contrast:1.12,sat:1.28,warm:0.0,tint:0.0,filmic:0.08,feat:'Compact & crisp · all lenses'} },
+  { id:'rollei',name:'ROLLEIFLEX',      cost:7000, desc:'Dreamy twin-lens square look. +10% score.', perk:{mult:1.10}, body:'#26201a', lens:'#cfc9b0', look:{gain:[1.04,1.0,0.95],lift:[0.04,0.03,0.0],hi:[0,0,0],contrast:0.92,sat:0.98,warm:0.06,tint:0.0,filmic:0.10,feat:'Dreamy square render'} },
   // PRO GEAR CO.
-  { id:'hassel',name:'HASSELBLAD',      cost:14000,desc:'Medium-format richness. Lush colour, +20% score.', perk:{mult:1.20,color:0.04}, body:'#1a2a3a', lens:'#ffd24d', grade:{contrast:1.1,warmth:0.5,feat:'Medium-format richness'} },
-  { id:'phase', name:'PHASE ONE',       cost:22000,desc:'Insane resolution & detail. Easiest Sharp, +10%.', perk:{sharp:40,mult:1.10}, body:'#0e0e10', lens:'#9fe', grade:{contrast:1.14,warmth:0,feat:'Ultra detail · all lenses'} },
-  { id:'cinee', name:'CINE RIG',        cost:17000,desc:'Cinematic motion-picture look. +15% score.', perk:{mult:1.15}, body:'#2a1a1a', lens:'#ff6b6b', grade:{contrast:1.18,warmth:1.5,feat:'Cinematic teal-orange'} },
+  { id:'hassel',name:'HASSELBLAD',      cost:14000,desc:'Medium-format richness. Lush colour, +20% score.', perk:{mult:1.20,color:0.04}, body:'#1a2a3a', lens:'#ffd24d', look:{gain:[1.01,1.0,1.0],lift:[0,0,0],hi:[0,0,0],contrast:1.04,sat:1.06,warm:0.01,tint:0.0,filmic:0.12,feat:'Medium-format richness'} },
+  { id:'phase', name:'PHASE ONE',       cost:22000,desc:'Insane resolution & detail. Easiest Sharp, +10%.', perk:{sharp:40,mult:1.10}, body:'#0e0e10', lens:'#9fe', look:{gain:[1.02,1.01,1.01],lift:[0,0,0],hi:[0,0,0],contrast:1.18,sat:1.12,warm:0.0,tint:0.0,filmic:0.10,feat:'Ultra detail · all lenses'} },
+  { id:'cinee', name:'CINE RIG',        cost:17000,desc:'Cinematic motion-picture look. +15% score.', perk:{mult:1.15}, body:'#2a1a1a', lens:'#ff6b6b', look:{gain:[1.03,1.0,1.0],lift:[0.0,0.03,0.06],hi:[0.06,0.03,0.0],contrast:1.10,sat:1.05,warm:0.04,tint:0.0,filmic:0.30,feat:'Cinematic teal-orange'} },
   // STREET LAB
-  { id:'ricoh', name:'RICOH GR',        cost:5000, desc:'The ultimate street snapper. High-contrast and sharp.', perk:{sharp:25}, body:'#141416', lens:'#36e0ff', grade:{contrast:1.2,warmth:0,feat:'Street snap · high contrast'} },
-  { id:'x100',  name:'FUJI X100',       cost:8000, desc:'Classic rangefinder styling with beautiful colour.', perk:{color:0.05,sharp:10}, body:'#3a2f24', lens:'#cfd4da', grade:{contrast:1.1,warmth:1.5,feat:'Classic colour · all lenses'} },
-  { id:'lumix', name:'LUMIX',           cost:6000, desc:'Brilliant low-light performer. Wider exposure range.', perk:{dark:0.07,bright:0.06}, body:'#20242a', lens:'#8af', grade:{contrast:1.02,warmth:-1,feat:'Low-light hero · all lenses'} },
+  { id:'ricoh', name:'RICOH GR',        cost:5000, desc:'The ultimate street snapper. High-contrast and sharp.', perk:{sharp:25}, body:'#141416', lens:'#36e0ff', look:{gain:[1.0,1.0,1.02],lift:[0,0,0],hi:[0,0,0],contrast:1.26,sat:1.15,warm:-0.03,tint:0.0,filmic:0.10,feat:'Street snap · high contrast'} },
+  { id:'x100',  name:'FUJI X100',       cost:8000, desc:'Classic rangefinder styling with beautiful colour.', perk:{color:0.05,sharp:10}, body:'#3a2f24', lens:'#cfd4da', look:{gain:[1.03,1.03,1.0],lift:[0,0,0],hi:[0.03,0.02,0.0],contrast:1.06,sat:1.12,warm:0.04,tint:0.02,filmic:0.12,feat:'Classic colour · all lenses'} },
+  { id:'lumix', name:'LUMIX',           cost:6000, desc:'Brilliant low-light performer. Wider exposure range.', perk:{dark:0.07,bright:0.06}, body:'#20242a', lens:'#8af', look:{gain:[1.01,1.0,1.0],lift:[0,0,0],hi:[0,0,0],contrast:1.03,sat:1.04,warm:0.02,tint:0.0,filmic:0.05,feat:'Low-light hero · all lenses'} },
 ];
 function ownedCams(){ try{ return JSON.parse(lsGet('pm_owned_cam','["basic"]')); }catch(e){ return ['basic']; } }
 function equippedCam(){ const e=lsGet('pm_cam','basic'); return ownedCams().indexOf(e)>=0?e:'basic'; }
-function camObj(id){ if(typeof CAMERAS==='undefined'||!CAMERAS) return {id:'basic',body:'#2b2f3a',lens:'#39c',grade:{contrast:1,warmth:0,feat:''},perk:{},cost:0,name:'STARTER'}; return CAMERAS.find(c=>c.id===id)||CAMERAS[0]; }
+function camObj(id){ if(typeof CAMERAS==='undefined'||!CAMERAS) return {id:'basic',body:'#2b2f3a',lens:'#39c',look:{gain:[1,1,1],lift:[0,0,0],hi:[0,0,0],contrast:1,sat:1,warm:0,tint:0,filmic:0,feat:''},perk:{},cost:0,name:'STARTER'}; return CAMERAS.find(c=>c.id===id)||CAMERAS[0]; }
 function camPerk(){ const p=camObj(equippedCam()).perk||{}; return {sharp:p.sharp||0, color:p.color||0, dark:p.dark||0, bright:p.bright||0, mult:p.mult||1}; }
-function camGrade(){ return camObj(equippedCam()).grade || {contrast:1,warmth:0,feat:''}; }
+function camGrade(){ return camObj(equippedCam()).look || {gain:[1,1,1],lift:[0,0,0],hi:[0,0,0],contrast:1,sat:1,warm:0,tint:0,filmic:0,feat:''}; }
 function camLensLocked(){ return equippedCam()==='leica'; }
 
 /* ---- camera shops (unlock more as you earn trophies) ---- */
