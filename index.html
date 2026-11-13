@@ -632,6 +632,48 @@
     .hud{ left:50%; right:auto; transform:translateX(-50%); align-items:center;
       top:calc(env(safe-area-inset-top) + 6px) }
   }
+  /* ---- Home stats panel ---- */
+  .statwrap{ display:grid; grid-template-columns:repeat(3,1fr); gap:7px; width:100%; max-width:560px;
+    margin:2px auto 10px; }
+  .statwrap .st{ background:linear-gradient(180deg,#171726,#0f0f1a); border:2px solid #2a2a40;
+    border-radius:9px; padding:7px 9px; text-align:left; }
+  .statwrap .st .k{ font:700 9px/1.2 ui-monospace,monospace; letter-spacing:.09em; color:#8a8aaa; }
+  .statwrap .st .v{ font:800 18px/1.05 ui-monospace,monospace; color:#fff; margin-top:3px; }
+  .statwrap .st.rank{ grid-column:1 / -1; background:linear-gradient(180deg,#14233a,#0e1526);
+    border-color:#36506e; }
+  .statwrap .st.rank .v{ color:#36e0ff; }
+  .statwrap .st.cr .v{ color:#ffe14d; }
+  .statwrap .st.tr .v{ color:#ffd24d; }
+  .xpbar{ height:8px; background:#0b0b16; border:1px solid #2a2a40; border-radius:5px;
+    margin-top:7px; overflow:hidden; }
+  .xpbar>i{ display:block; height:100%; width:0;
+    background:linear-gradient(90deg,#36e0ff,#5bff9d); transition:width .4s ease; }
+  .statwrap .st .sub{ font:600 9px/1.3 ui-monospace,monospace; color:#8fd; margin-top:5px; letter-spacing:.04em; }
+  @media (max-width:360px){ .statwrap .st .v{ font-size:15px } }
+  /* ---- Fullscreen map + bottom-left mini preview ---- */
+  #barmap{ cursor:pointer }
+  .mapfull{ position:fixed; inset:0; z-index:70; display:none; background:rgba(6,6,16,.93);
+    align-items:center; justify-content:center; flex-direction:column; gap:12px;
+    overscroll-behavior:none; }
+  .mapfull.on{ display:flex; }
+  #mapFullCv{ width:min(92vw,92vh); height:min(92vw,92vh); max-width:600px; max-height:600px;
+    image-rendering:pixelated; border:4px solid #36e0ff; border-radius:12px;
+    box-shadow:0 0 0 2px #0b0b16, 0 12px 44px rgba(0,0,0,.6); cursor:pointer; }
+  .mapfull-hint{ color:#8fd; font:700 12px/1 ui-monospace,monospace; letter-spacing:.08em; opacity:.85 }
+  .mapfull-x{ position:absolute; top:calc(env(safe-area-inset-top) + 14px); right:14px;
+    width:44px; height:44px; border-radius:50%; background:#1a1a28; color:#fff;
+    border:2px solid #36e0ff; font-size:18px; cursor:pointer; }
+  .mapmini{ position:fixed; left:12px; bottom:calc(12px + env(safe-area-inset-bottom));
+    z-index:66; display:none; }
+  .mapmini.on{ display:block; }
+  #mapMiniCv{ width:96px; height:96px; image-rendering:pixelated; border:3px solid #36e0ff;
+    border-radius:9px; box-shadow:0 4px 18px rgba(0,0,0,.55); cursor:pointer; display:block; }
+  .mapmini .mm-x{ position:absolute; top:-9px; right:-9px; width:24px; height:24px; border-radius:50%;
+    background:#1a1a28; color:#fff; border:2px solid #36e0ff; font-size:12px; line-height:1;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .mapmini .mm-tag{ position:absolute; left:4px; bottom:4px; background:rgba(11,11,22,.75);
+    color:#8fd; font:700 8px/1 ui-monospace,monospace; letter-spacing:.06em; padding:3px 5px;
+    border-radius:4px; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -880,6 +922,7 @@
 
 <div class="home" id="home">
   <h2>LOADOUT</h2>
+  <div class="statwrap" id="homeStats"></div>
   <div class="homemid">
     <div class="hcol" id="homeAchCol">
       <div class="hlbl">TROPHIES</div>
@@ -906,6 +949,17 @@
       <button class="miniopen" id="homeBack">BACK</button>
     </div>
   </div>
+</div>
+
+<div class="mapfull" id="mapFull">
+  <canvas id="mapFullCv" width="600" height="600"></canvas>
+  <div class="mapfull-hint">TAP MAP TO SHRINK · ✕ TO CLOSE</div>
+  <button class="mapfull-x" id="mapFullClose">✕</button>
+</div>
+<div class="mapmini" id="mapMini">
+  <canvas id="mapMiniCv" width="192" height="192"></canvas>
+  <div class="mm-tag">MAP</div>
+  <div class="mm-x" id="mapMiniClose">✕</div>
 </div>
 
 <div class="tut" id="tut">
@@ -1184,6 +1238,7 @@ async function saveAllToPhotos(){
   toast('Saved '+blobs.length+' images');
 }
 function saveRound(r){
+  try{ let n=parseInt(lsGet('pm_rounds','0'),10)||0; lsSet('pm_rounds', n+1); }catch(e){}
   let arr; try{ arr = JSON.parse(localStorage.getItem('mcam_rounds')||'[]'); }catch(e){ arr = []; }
   arr.push(r);
   arr.sort((a,b)=>b.total-a.total);
@@ -1227,6 +1282,23 @@ function mapRedraw(){
   try{ if(els.barmap) drawMap(els.barmap, geoPath, shotMarks, lastPos); }catch(e){}
   try{ if(els.results && els.results.classList.contains('open')) drawMap(els.resMap, geoPath, shotMarks, lastPos); }catch(e){}
   try{ if(mapOn && els.minimap) drawMap(els.minimap, geoPath, shotMarks, lastPos); }catch(e){}
+  try{ if(els.mapFull && els.mapFull.classList.contains('on')) drawMap(els.mapFullCv, geoPath, shotMarks, lastPos); }catch(e){}
+  try{ if(els.mapMini && els.mapMini.classList.contains('on')) drawMap(els.mapMiniCv, geoPath, shotMarks, lastPos); }catch(e){}
+}
+/* ---- map enlarge / shrink toggle ---- */
+function mapViewFull(){ if(!els.mapFull) return; els.mapMini.classList.remove('on'); els.mapFull.classList.add('on');
+  try{ drawMap(els.mapFullCv, geoPath, shotMarks, lastPos); }catch(e){}
+  if(typeof audio==='function'){ audio(); } if(typeof beep==='function' && !state.muted){ beep(680,0.05,'square',0.05); } }
+function mapViewMini(){ if(!els.mapMini) return; els.mapFull.classList.remove('on'); els.mapMini.classList.add('on');
+  try{ drawMap(els.mapMiniCv, geoPath, shotMarks, lastPos); }catch(e){}
+  if(typeof beep==='function' && !state.muted){ beep(520,0.05,'square',0.05); } }
+function mapViewClose(){ if(els.mapFull) els.mapFull.classList.remove('on'); if(els.mapMini) els.mapMini.classList.remove('on'); }
+function wireMapViewToggle(){
+  els.barmap && els.barmap.addEventListener('click', mapViewFull);
+  els.mapFullCv && els.mapFullCv.addEventListener('click', mapViewMini);
+  els.mapFullClose && els.mapFullClose.addEventListener('click', e=>{ e.stopPropagation(); mapViewClose(); });
+  els.mapMiniCv && els.mapMiniCv.addEventListener('click', mapViewFull);
+  els.mapMiniClose && els.mapMiniClose.addEventListener('click', e=>{ e.stopPropagation(); mapViewClose(); });
 }
 function drawMap(cv, path, marks, cur){
   const W=cv.width, H=cv.height, g=cv.getContext('2d'); g.imageSmoothingEnabled=false; g.textAlign='left';
@@ -1546,6 +1618,9 @@ const els = {
   lookReadCell:el('lookReadCell'), stage:el('stage'),
   homeBtn:el('homeBtn'), resHome:el('resHome'), home:el('home'), homeChar:el('homeChar'), homeName:el('homeName'),
   homeAch:el('homeAch'), homeCam:el('homeCam'), homeFeat:el('homeFeat'), homeBag:el('homeBag'),
+  homeStats:el('homeStats'),
+  mapFull:el('mapFull'), mapFullCv:el('mapFullCv'), mapFullClose:el('mapFullClose'),
+  mapMini:el('mapMini'), mapMiniCv:el('mapMiniCv'), mapMiniClose:el('mapMiniClose'),
   homeShoot:el('homeShoot'), homeShop:el('homeShop'), homeBack:el('homeBack'), homeCamBtn:el('homeCamBtn'),
   menuBtn:el('menuBtn'), menuPanel:el('menuPanel'),
   con:el('con'), conVal:el('conVal'), sat:el('sat'), satVal:el('satVal'),
@@ -2405,6 +2480,40 @@ function syncVals(){
 /* ---------- 8-bit photographer sprite (breathing + shutter) ---------- */
 let spriteT = 0, spriteFlash = 0, spriteRAF = 0;
 function pxr(c,x,y,w,h,col){ c.fillStyle=col; c.fillRect(x,y,w,h); }
+/* ---------- smooth cartoon drawing helpers (Disney-style rebuild) ---------- */
+function _hx2rgb(h){ h=(h||'#000').replace('#',''); if(h.length===3) h=h.split('').map(x=>x+x).join(''); return [parseInt(h.slice(0,2),16)||0,parseInt(h.slice(2,4),16)||0,parseInt(h.slice(4,6),16)||0]; }
+// lighten (f>0, toward white) or darken (f<0, toward black) a hex colour
+function shade(h,f){ let [r,g,b]=_hx2rgb(h); const m=f<0?0:255, t=Math.min(1,Math.abs(f)); r=Math.round(r+(m-r)*t); g=Math.round(g+(m-g)*t); b=Math.round(b+(m-b)*t); return 'rgb('+r+','+g+','+b+')'; }
+function rr(c,x,y,w,h,r){ r=Math.min(r,Math.abs(w)/2,Math.abs(h)/2); c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+// rounded limb (line with round caps), optional outline underneath
+function limb(c,x1,y1,x2,y2,w,col,out){ c.lineCap='round';
+  if(out){ c.strokeStyle=out; c.lineWidth=w+1.4; c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke(); }
+  c.strokeStyle=col; c.lineWidth=w; c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke(); }
+function dab(c,x,y,r,col){ c.fillStyle=col; c.beginPath(); c.arc(x,y,r,0,7); c.fill(); }
+/* ---------- cel-shaded ink-comic helpers ---------- */
+var INK='#15100f';                                  // heavy black ink outline colour
+function _ln(c,x1,y1,x2,y2){ c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke(); }
+// a limb drawn the comic way: thick ink outline, flat colour, hard cel shadow + highlight streak
+function celLimb(c,x1,y1,x2,y2,w,col){
+  const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;   // unit perpendicular
+  c.lineCap='round';
+  c.strokeStyle=INK; c.lineWidth=w+2.1; _ln(c,x1,y1,x2,y2);              // ink outline
+  c.strokeStyle=col; c.lineWidth=w; _ln(c,x1,y1,x2,y2);                  // flat base
+  const o=w*0.3;
+  c.strokeStyle=shade(col,-0.42); c.lineWidth=w*0.4; _ln(c,x1+nx*o,y1+ny*o,x2+nx*o,y2+ny*o);  // cel shadow side
+  c.strokeStyle=shade(col,0.42);  c.lineWidth=w*0.26; _ln(c,x1-nx*o,y1-ny*o,x2-nx*o,y2-ny*o); // highlight streak
+}
+// fill a hard-edged cel shadow over the right/lower part of the shape currently clipped
+function celShadeClip(c, cx, cy, r, col){
+  c.save(); c.clip();
+  c.fillStyle=shade(col,-0.4);
+  c.beginPath(); c.moveTo(cx+r*0.05,cy-r*1.4); c.lineTo(cx+r*1.5,cy-r*0.2);
+  c.lineTo(cx+r*1.5,cy+r*1.6); c.lineTo(cx-r*0.4,cy+r*1.6); c.lineTo(cx+r*0.45,cy+r*0.1);
+  c.closePath(); c.fill();
+  c.fillStyle='rgba(255,255,255,0.14)';                                  // small cel highlight upper-left
+  c.beginPath(); c.ellipse(cx-r*0.4,cy-r*0.45,r*0.4,r*0.3,-0.5,0,7); c.fill();
+  c.restore();
+}
 /* black fedora + sunglasses, drawn over a head whose top sits at y=6+dy (x 20..28) */
 function drawFedora(c,dy){
   pxr(c,16,5+dy,16,2,'#070707');     // wide brim
@@ -2458,11 +2567,10 @@ function drawHairHat(c, ch, dy){
 }
 function drawArms(c, pose, br, flash, ch, t){
   const arm=ch.arm, skin=ch.skin;
-  // the held camera reflects the equipped body/lens colours
   const CAM=(typeof camObj==='function'&&typeof equippedCam==='function')?camObj(equippedCam()):null;
   const camBody=CAM?CAM.body:'#111', camLens=CAM?CAM.lens:'#39c';
   if(pose==='ready' || pose==='shoot' || pose==='playcam'){
-    const fid = pose==='playcam' ? Math.round(Math.sin((t||0)*5)*1) : 0;   // fiddling with the camera
+    const fid = pose==='playcam' ? Math.round(Math.sin((t||0)*5)*1) : 0;
     pxr(c,13,14+br,4,8,arm); pxr(c,31,14+br+fid,4,8,arm);          // arms up
     pxr(c,14,12+br,3,3,skin); pxr(c,31,12+br+fid,3,3,skin);        // hands
     pxr(c,18,11+br,13,7,camBody); pxr(c,20,9+br,4,2,camBody);       // camera body
@@ -2867,17 +2975,51 @@ var TIME_SECS = 60, pmTimeLeft = 0, pmTimer = 0;
 
 /* ---- XP + ranks ---- */
 var pmXP = parseInt(lsGet('pm_xp','0'),10) || 0;
-const TITLES = [
-  [0,'ROOKIE'],[3000,'SHUTTERBUG'],[8000,'STREET SHOOTER'],[16000,'PRO LENS'],
-  [30000,'ACE'],[50000,'MAESTRO'],[80000,'PHOTO MASTER']
+/* ---- 100-level PRESTIGE progression ---- */
+// cumulative XP needed to REACH a level (level 1 = 0 XP; rises gently then steepens)
+function xpForLevel(L){ L=Math.max(1,Math.min(100,L|0)); const k=L-1; return Math.round(25*k*k + 75*k); }
+function levelFromXP(xp){ let L=1; for(let i=2;i<=100;i++){ if(xp>=xpForLevel(i)) L=i; else break; } return L; }
+// prestige ranks — name + symbol + colour change as you climb, every 10 levels
+var PRESTIGE = [
+  { lv:1,   name:'ROOKIE',         sym:'📷', col:'#9aa0b5' },
+  { lv:10,  name:'SHUTTERBUG',     sym:'🔎', col:'#8fd0ff' },
+  { lv:20,  name:'STREET SHOOTER', sym:'🎞️', col:'#5bd0ff' },
+  { lv:30,  name:'FRAME HUNTER',   sym:'🌆', col:'#5bff9d' },
+  { lv:40,  name:'PRO LENS',       sym:'📸', col:'#36e0ff' },
+  { lv:50,  name:'ACE',            sym:'🏅', col:'#ffe14d' },
+  { lv:60,  name:'VIRTUOSO',       sym:'✨', col:'#ffc24d' },
+  { lv:70,  name:'MAESTRO',        sym:'🎖️', col:'#ff8a3a' },
+  { lv:80,  name:'LEGEND',         sym:'👑', col:'#ff5df2' },
+  { lv:90,  name:'GRANDMASTER',    sym:'💎', col:'#b36bff' },
+  { lv:100, name:'PHOTO MASTER',   sym:'🏆', col:'#ff4d6d' }
 ];
-function titleFor(xp){ let t=TITLES[0][1]; for(const [n,nm] of TITLES){ if(xp>=n) t=nm; } return t; }
-function nextTitle(xp){ for(const [n,nm] of TITLES){ if(xp<n) return [n,nm]; } return null; }
-function addXP(n){ pmXP += Math.max(0,Math.round(n)); lsSet('pm_xp',pmXP); refreshXPUI(); }
+function prestigeFor(level){ let p=PRESTIGE[0]; for(const t of PRESTIGE){ if(level>=t.lv) p=t; } return p; }
+function nextPrestige(level){ for(const t of PRESTIGE){ if(level<t.lv) return t; } return null; }
+function titleFor(xp){ return prestigeFor(levelFromXP(xp)).name; }       // back-compat (rank name)
+// legacy helper kept so nothing else breaks
+const TITLES = PRESTIGE.map(p=>[xpForLevel(p.lv), p.name]);
+function nextTitle(xp){ const np=nextPrestige(levelFromXP(xp)); return np?[xpForLevel(np.lv),np.name]:null; }
+function addXP(n){
+  const beforeL = levelFromXP(pmXP), beforeRank = prestigeFor(beforeL).name;
+  pmXP += Math.max(0,Math.round(n)); lsSet('pm_xp',pmXP);
+  refreshXPUI();
+  const afterL = levelFromXP(pmXP);
+  if(afterL>beforeL){
+    const p = prestigeFor(afterL);
+    if(p.name!==beforeRank){   // climbed into a brand-new prestige rank
+      try{ toast(p.sym+' '+p.name+' · LV '+afterL+'!'); }catch(e){}
+      if(!state.muted){ try{ beep(880,0.08,'square',0.06); setTimeout(()=>beep(1180,0.10,'square',0.06),90); setTimeout(()=>beep(1560,0.12,'square',0.06),190);}catch(e){} }
+    } else {                    // ordinary level-up
+      try{ toast('LEVEL UP · LV '+afterL); }catch(e){}
+      if(!state.muted){ try{ beep(1040,0.07,'square',0.05); setTimeout(()=>beep(1320,0.08,'square',0.05),80);}catch(e){} }
+    }
+    try{ if(typeof renderHomeStats==='function' && els.home && els.home.classList.contains('on')) renderHomeStats(); }catch(e){}
+  }
+}
 function refreshXPUI(){
-  const t=titleFor(pmXP);
-  if(els.xpLine) els.xpLine.textContent = 'RANK: '+t+' · '+pmXP.toLocaleString()+' XP';
-  if(els.achXP)  els.achXP.textContent  = t+' · '+pmXP.toLocaleString()+' XP';
+  const L=levelFromXP(pmXP), p=prestigeFor(L);
+  if(els.xpLine) els.xpLine.textContent = p.sym+' '+p.name+' · LV '+L+' · '+pmXP.toLocaleString()+' XP';
+  if(els.achXP)  els.achXP.textContent  = p.name+' · LV '+L+' · '+pmXP.toLocaleString()+' XP';
 }
 
 /* ---- unlockable characters + looks ---- */
@@ -3005,7 +3147,8 @@ function pmFinishRound(total, rank){
   if(rank==='S') unlockAch('srank');
   if(titleFor(pmXP)==='PHOTO MASTER') unlockAch('master');
   const gained = total;
-  if(els.resXP) els.resXP.textContent = '+'+gained.toLocaleString()+' XP · '+titleFor(pmXP);
+  if(els.resXP){ const _L=levelFromXP(pmXP), _p=prestigeFor(_L);
+    els.resXP.textContent = '+'+gained.toLocaleString()+' XP · '+_p.sym+' '+_p.name+' LV '+_L; }
   if(els.resObj) els.resObj.textContent = roundTheme ? ('OBJECTIVE: '+roundTheme.name+(themeDone?' ✓':' ✗')) : '';
 }
 
@@ -3175,27 +3318,23 @@ function drawShopkeeper(c, x, y, t, col){
   c.fillStyle='#cfe8ff'; c.fillRect(x+8,y+20+br,6,10);                     // apron bib
   if(talking){
     c.fillStyle='#caa27a'; c.fillRect(x-2,y+22+br,4,10); c.fillRect(x+20,y+22+br,4,10); // arms resting
-    // little speech dots above the head
     c.fillStyle='#fff'; const d=(Math.floor(t*3)%3);
     for(let i=0;i<=d;i++) c.fillRect(x+20+i*4, y-2+br, 2,2);
   } else {
-    // adjusting a camera on the counter: hands dip toward a small camera
     c.fillStyle='#caa27a'; c.fillRect(x+1,y+24+br,4,8); c.fillRect(x+17,y+24+fiddle,4,8);
     c.fillStyle='#111'; c.fillRect(x+6,y+30,12,6);                         // camera on counter
     c.fillStyle='#8fd'; c.fillRect(x+10,y+32,4,3);
     c.fillStyle='#ffe14d'; if(fiddle>0) c.fillRect(x+16,y+29,2,2);         // adjustment glint
   }
 }
-// background worker restocking a shelf (arms moving)
 function drawWorker(c, x, y, t){
   const lift=Math.round(Math.abs(Math.sin(t*3))*3);
   c.fillStyle='#d0a884'; c.fillRect(x+3,y,8,8);                            // head
   c.fillStyle='#5a3a2a'; c.fillRect(x+2,y-2,10,4);                         // hair
   c.fillStyle='#8a5a3a'; c.fillRect(x,y+8,14,11);                          // shirt
-  c.fillStyle='#d0a884'; c.fillRect(x-2,y+9-lift,3,7); c.fillRect(x+13,y+9-lift,3,7); // arms reaching up/down
+  c.fillStyle='#d0a884'; c.fillRect(x-2,y+9-lift,3,7); c.fillRect(x+13,y+9-lift,3,7); // arms
   c.fillStyle='#111'; c.fillRect(x+14,y+6-lift,6,4);                       // camera being placed
 }
-// a customer browsing the shop (bobs, shifts, looks around)
 function drawCustomer(c, x, y, t, col){
   const bob=Math.round(Math.sin(t*1.6)*1);
   const step=Math.round(Math.sin(t*0.8)*2);
@@ -3215,20 +3354,15 @@ function drawShopScene(){
   c.fillStyle='#5a4028'; for(let sy=14; sy<80; sy+=22){ c.fillRect(10,sy,W-20,4); }   // shelves
   const cols=['#b23a2a','#1c1c1e','#2a2a2c','#121212','#2b2f3a'];
   for(let sy=16, k=0; sy<78; sy+=22){ for(let sx=18; sx<W-24; sx+=30){ c.fillStyle=cols[k++%cols.length]; c.fillRect(sx,sy-9,16,8); c.fillStyle='#8fd'; c.fillRect(sx+5,sy-7,5,4);} }
-  // the shop gets busier as you unlock higher tiers — more workers restocking
   const tier=(typeof curShop!=='undefined')?curShop:0;
-  const workerN=1+tier;                                    // 1 → 4 workers
+  const workerN=1+tier;                                    // 1 -> 4 workers
   for(let i=0;i<workerN;i++){ drawWorker(c, 54 + i*56, 18 + (i%2)*5, shopT + i*1.3); }
-  // counter
-  c.fillStyle='#2a1a0e'; c.fillRect(0,H-34,W,34);
+  c.fillStyle='#2a1a0e'; c.fillRect(0,H-34,W,34);                          // counter
   c.fillStyle='#6a4a2a'; c.fillRect(0,H-36,W,4);
-  // customers browsing in the aisle, in front of the counter (0 → 3, busier shops)
   for(let i=0;i<tier;i++){ drawCustomer(c, 92 + i*56, H-52, shopT + i*2.1, CUST_COLS[i%CUST_COLS.length]); }
-  // shopkeeper behind counter (right) — colours vary per shop
   const S=(typeof SHOPS!=='undefined')?SHOPS[curShop]:null;
   drawShopkeeper(c, W-70, H-78, shopT, S&&S.staffColors);
   if(S){ c.fillStyle='#ffe14d'; c.font='7px "Press Start 2P",monospace'; c.textAlign='right'; c.fillText(S.staff, W-6, 12); c.textAlign='left'; }
-  // player (left), uses the selected character head/colours, with a gentle breathing bob
   const ch=(typeof currentChar==='function')?currentChar():{skin:'#e3b48a',hair:'#3a2a1a',hairStyle:'hat',shades:true};
   const px=28, py=H-74, br=Math.round(Math.sin(shopT+1)*1);
   c.fillStyle=ch.skin; c.fillRect(px+4,py+6+br,12,12);
@@ -3532,7 +3666,43 @@ function camIconCanvas(cam, size){
   const s=size/34; g.fillStyle=cam.body; g.fillRect(6*s,12*s,22*s,14*s); g.fillStyle='#111'; g.fillRect(13*s,8*s,8*s,5*s);
   g.fillStyle=cam.lens; g.beginPath(); g.arc(17*s,19*s,6*s,0,7); g.fill(); return cv;
 }
+function renderHomeStats(){
+  if(!els.homeStats) return;
+  const esc=s=>String(s);
+  const cr = (typeof pmCredits==='number'?pmCredits:0).toLocaleString();
+  const xp = (typeof pmXP==='number'?pmXP:0);
+  // 100-level prestige progression
+  const L = (typeof levelFromXP==='function') ? levelFromXP(xp) : 1;
+  const p = (typeof prestigeFor==='function') ? prestigeFor(L) : {name:'ROOKIE',sym:'⭐',col:'#36e0ff'};
+  let pct=100, sub='★ MAX · LEVEL 100 REACHED';
+  if(L<100){
+    const cur=xpForLevel(L), nxt=xpForLevel(L+1), span=Math.max(1,nxt-cur);
+    pct=Math.max(0,Math.min(100,Math.round((xp-cur)/span*100)));
+    const np=(typeof nextPrestige==='function')?nextPrestige(L):null;
+    sub=(nxt-xp).toLocaleString()+' XP → LV '+(L+1)+(np?('  ·  '+np.sym+' '+np.name+' @ LV '+np.lv):'');
+  }
+  const troT = (typeof ACH!=='undefined') ? ACH.length : 0;
+  const tro  = (typeof trophyCount==='function') ? trophyCount() : 0;
+  const shots  = parseInt(lsGet('pm_shots','0'),10)||0;
+  const rounds = parseInt(lsGet('pm_rounds','0'),10)||0;
+  const places = (typeof levelsSeen==='function') ? levelsSeen() : 0;
+  let best=0; try{ (JSON.parse(lsGet('mcam_rounds','[]'))||[]).forEach(r=>{ if((r.total||0)>best) best=r.total; }); }catch(e){}
+  const camN = (typeof camObj==='function') ? camObj(equippedCam()).name.replace(' DIGICAM','') : '';
+  const tile=(cls,k,v)=>'<div class="st '+cls+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';
+  els.homeStats.innerHTML =
+    '<div class="st rank"><div class="k">'+p.sym+' RANK · LEVEL '+L+' / 100</div>'+
+      '<div class="v" style="color:'+p.col+'">'+p.name+'</div>'+
+      '<div class="xpbar"><i style="width:'+pct+'%;background:linear-gradient(90deg,'+p.col+',#5bff9d)"></i></div>'+
+      '<div class="sub">'+xp.toLocaleString()+' XP · '+sub+'</div></div>'+
+    tile('cr','🪙 CREDITS', cr)+
+    tile('tr','🏆 TROPHIES', tro+' / '+troT)+
+    tile('','🏅 BEST SCORE', best.toLocaleString())+
+    tile('','📸 SHOTS TAKEN', shots.toLocaleString())+
+    tile('','🎞️ ROUNDS', rounds.toLocaleString())+
+    tile('','🗺️ PLACES', places.toLocaleString());
+}
 function renderHome(){
+  renderHomeStats();
   els.homeName.textContent = currentChar().name;
   // achievements strip
   if(typeof ACH!=='undefined'){
@@ -3571,6 +3741,7 @@ function openHome(from){
   homeNext=0; cancelAnimationFrame(homeRAF); homeLoop();
 }
 function closeHome(){ els.home.classList.remove('on'); cancelAnimationFrame(homeRAF); }
+if(typeof wireMapViewToggle==='function') wireMapViewToggle();
 els.homeBtn && els.homeBtn.addEventListener('click', ()=>{ audio(); openHome('opening'); });
 els.resHome && els.resHome.addEventListener('click', ()=>{ if(typeof commitRound==='function') commitRound(); if(typeof stopFireworks==='function') stopFireworks(); openHome('results'); });
 els.homeCamBtn && els.homeCamBtn.addEventListener('click', ()=>{ audio(); openHome('camera'); });  // jump to loadout mid-shoot
