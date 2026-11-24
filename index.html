@@ -19,9 +19,9 @@
   .lch-btn .small{font-size:12.5px;font-weight:600;opacity:.8;}
   .lch-btn.play{background:linear-gradient(180deg,#5cf0ff,#20bfe6);}
   .lch-btn.edit{background:linear-gradient(180deg,#ffd76a,#e0a63a);}
-  .lch-foot{color:#4a4a6a;font-size:11px;letter-spacing:.2em;}
-  #appFrame{position:fixed;inset:0;border:0;width:100%;height:100%;display:none;background:#000;z-index:5;}
-  #appFrame.on{display:block;}
+  .lch-foot{color:#4a4a6a;font-size:11px;letter-spacing:.2em;text-align:center;}
+  .appframe{position:fixed;inset:0;border:0;width:100%;height:100%;display:none;background:#000;z-index:5;}
+  .appframe.on{display:block;}
   #backMenu{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);z-index:9999;display:none;
     appearance:none;border:1px solid rgba(255,255,255,.3);background:rgba(10,10,22,.72);color:#eaeaf2;font-family:inherit;font-size:12px;font-weight:700;
     letter-spacing:.08em;padding:9px 12px;border-radius:20px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 3px 10px rgba(0,0,0,.5);}
@@ -37,9 +37,10 @@
     <button class="lch-btn play" id="playBtn"><span class="big">▶ PLAY</span><span class="small">the retro arcade photo game</span></button>
     <button class="lch-btn edit" id="editBtn"><span class="big">✎ EDIT</span><span class="small">Literum — mobile photo editor</span></button>
   </div>
-  <div class="lch-foot">tap MENU any time to switch modes</div>
+  <div class="lch-foot">your work is kept when you tap MENU to switch modes</div>
 </div>
-<iframe id="appFrame" title="Photo Master" allow="camera; microphone; geolocation; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
+<iframe id="gameFrame" class="appframe" title="Photo Master game" allow="camera; microphone; geolocation; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
+<iframe id="editorFrame" class="appframe" title="Literum editor" allow="camera; microphone; fullscreen"></iframe>
 <button id="backMenu">⇄ MENU</button>
 <script type="text/html" id="gameSrc"><!doctype html>
 <html lang="en">
@@ -5089,7 +5090,8 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .brand .mark{ width:26px; height:26px; font-size:18px; }
   .brand .name{ font-size:19px; }
   .top-tabs{ padding:0 6px !important; }
-  .tab-page.active{ flex-direction:column !important; }
+  /* ---- PHOTO tab: controls become a bottom drawer; photo stays visible above ---- */
+  #photoTab.active{ flex-direction:column !important; }
   .stage{ padding:8px !important; width:100% !important; flex:1 1 auto !important; min-height:0 !important; }
   .panel-resize-handle, .filmstrip-resize-handle{ display:none !important; }
   .panel{
@@ -5107,11 +5109,30 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .panel-scale{ transform:none !important; width:100% !important; height:auto !important;
     flex:1 1 auto !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch;
     padding:20px 14px calc(42px + env(safe-area-inset-bottom)) !important; }
+  /* ---- floating Adjust button: only on the Photo tab ---- */
   #literumAdjustBtn{ position:fixed; right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); z-index:1600;
-    display:flex; align-items:center; gap:7px; padding:13px 20px; border:none; border-radius:26px;
+    display:none; align-items:center; gap:7px; padding:13px 20px; border:none; border-radius:26px;
     font-weight:700; font-size:15px; color:#1a1408; cursor:pointer;
     background:linear-gradient(180deg,#e2b765,#b98a3a); box-shadow:0 5px 16px rgba(0,0,0,.55); }
+  body[data-ed-tab="photo"] #literumAdjustBtn{ display:flex; }
   body.drawer-open #literumAdjustBtn{ bottom:calc(54vh + 12px); background:linear-gradient(180deg,#3a3d42,#26282c); color:#f0ead8; }
+  /* ---- VIDEO + GALLERY: stack every pane into one scrolling column (no overlap) ---- */
+  #videoTab.active, #galleryTab.active{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; }
+  .video-workspace, .gallery-workspace{ display:block !important; height:auto !important; min-height:0 !important; }
+  .video-top-row, .preview-row{ display:block !important; }
+  .video-top-row > *, .preview-row > *, .media-library, .preview-box{ width:100% !important; max-width:100% !important; }
+  .preview-box{ margin:0 0 10px !important; }
+  .preview-box, #libraryPreviewBox, #timelinePreviewBox{ min-height:180px !important; position:relative !important; }
+  .preview-box video, #galleryPreview, #timelinePreview, #libraryPreview{ width:100% !important; height:auto !important; max-height:46vh; }
+  .media-library{ max-height:none !important; }
+  .media-list{ max-height:34vh !important; }
+  .timeline-area{ min-height:0 !important; height:auto !important; }
+  .timeline-scroll{ max-height:48vh !important; }
+  .gallery-workspace{ grid-template-columns:1fr !important; grid-template-rows:auto !important; }
+  .gallery-main, .gallery-side{ grid-column:auto !important; grid-row:auto !important; width:100% !important;
+    border-right:none !important; min-height:0 !important; height:auto !important; }
+  .gallery-grid{ grid-template-columns:repeat(auto-fill,minmax(92px,1fr)) !important; min-height:0 !important; }
+  .gallery-side, .gallery-side-scroll{ overflow:visible !important; height:auto !important; }
 }
 @media (min-width:821px){ #literumAdjustBtn{ display:none !important; } }
 </style>
@@ -21942,29 +21963,47 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
 (function(){
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
   ready(function(){
-    if(document.getElementById('literumAdjustBtn')) return;
-    var b=document.createElement('button'); b.id='literumAdjustBtn'; b.type='button';
-    b.textContent='⚙ Adjust';
-    document.body.appendChild(b);
-    b.addEventListener('click',function(){
-      var open=document.body.classList.toggle('drawer-open');
-      b.textContent=open?'▾ Done':'⚙ Adjust';
-    });
+    if(!document.getElementById('literumAdjustBtn')){
+      var b=document.createElement('button'); b.id='literumAdjustBtn'; b.type='button'; b.textContent='⚙ Adjust';
+      document.body.appendChild(b);
+      b.addEventListener('click',function(){ var o=document.body.classList.toggle('drawer-open'); b.textContent=o?'▾ Done':'⚙ Adjust'; });
+    }
+    function updTab(){ var a=document.querySelector('.tab-btn.active'); var n=a?a.getAttribute('data-tab'):'photo';
+      document.body.setAttribute('data-ed-tab', n||'photo'); if(n!=='photo') document.body.classList.remove('drawer-open'); }
+    Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(t){ t.addEventListener('click',function(){ setTimeout(updTab,0); }); });
+    updTab();
+    // mobile export: send downloads to the Share sheet ("Save to Files" -> pick any folder)
+    if(('share' in navigator) && !('showSaveFilePicker' in window)){
+      document.addEventListener('click', function(e){
+        var a=(e.target && e.target.closest) ? e.target.closest('a[download]') : null;
+        if(!a || a.__pmSkip) return;
+        var href=a.getAttribute('href')||''; if(!/^blob:|^data:/.test(href)) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        (async function(){
+          var name=a.getAttribute('download')||'export';
+          try{
+            var blob=await (await fetch(href)).blob();
+            var file=new File([blob],name,{type:blob.type||'application/octet-stream'});
+            if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return; }
+          }catch(err){ if(err && err.name==='AbortError') return; }
+          var la=document.createElement('a'); la.__pmSkip=true; la.href=href; la.download=name;
+          document.body.appendChild(la); la.click(); la.remove();
+        })();
+      }, true);
+    }
   });
 })();
 <\/script>
 </body>
 </html></script>
 <script>
-  var frame=document.getElementById('appFrame'),launcher=document.getElementById('launcher'),back=document.getElementById('backMenu');
-  function openApp(id){
-    var html=document.getElementById(id).textContent.replace(/<\\\/script>/g,'<\/script>');
-    frame.srcdoc=html; frame.classList.add('on'); launcher.classList.add('hidden'); back.classList.add('on');
-  }
-  function toMenu(){ frame.classList.remove('on'); back.classList.remove('on'); launcher.classList.remove('hidden'); frame.removeAttribute('srcdoc'); frame.src='about:blank'; }
-  document.getElementById('playBtn').addEventListener('click',function(){ openApp('gameSrc'); });
-  document.getElementById('editBtn').addEventListener('click',function(){ openApp('editorSrc'); });
-  back.addEventListener('click',toMenu);
+  var launcher=document.getElementById('launcher'), back=document.getElementById('backMenu');
+  var gf=document.getElementById('gameFrame'), ef=document.getElementById('editorFrame');
+  function loadFrame(fr,srcId){ if(!fr.getAttribute('data-loaded')){ fr.srcdoc=document.getElementById(srcId).textContent.replace(/<\\\/script>/g,'<\/script>'); fr.setAttribute('data-loaded','1'); } }
+  function show(fr){ gf.classList.remove('on'); ef.classList.remove('on'); fr.classList.add('on'); launcher.classList.add('hidden'); back.classList.add('on'); }
+  document.getElementById('playBtn').addEventListener('click',function(){ loadFrame(gf,'gameSrc'); show(gf); });
+  document.getElementById('editBtn').addEventListener('click',function(){ loadFrame(ef,'editorSrc'); show(ef); });
+  back.addEventListener('click',function(){ gf.classList.remove('on'); ef.classList.remove('on'); launcher.classList.remove('hidden'); back.classList.remove('on'); });
 </script>
 </body>
 </html>
