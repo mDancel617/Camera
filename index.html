@@ -1,7 +1,5 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Photo Master</title>
 <style>
@@ -27,8 +25,7 @@
     letter-spacing:.08em;padding:9px 12px;border-radius:20px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 3px 10px rgba(0,0,0,.5);}
   #backMenu.on{display:block;}
   #backMenu:active{transform:scale(.96);}
-</style>
-</head>
+</style></head>
 <body>
 <div id="launcher">
   <div class="lch-title">PHOTO<br>MASTER</div>
@@ -5090,7 +5087,6 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .brand .mark{ width:26px; height:26px; font-size:18px; }
   .brand .name{ font-size:19px; }
   .top-tabs{ padding:0 6px !important; }
-  /* ---- PHOTO tab: controls become a bottom drawer; photo stays visible above ---- */
   #photoTab.active{ flex-direction:column !important; }
   .stage{ padding:8px !important; width:100% !important; flex:1 1 auto !important; min-height:0 !important; }
   .panel-resize-handle, .filmstrip-resize-handle{ display:none !important; }
@@ -5109,14 +5105,12 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .panel-scale{ transform:none !important; width:100% !important; height:auto !important;
     flex:1 1 auto !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch;
     padding:20px 14px calc(42px + env(safe-area-inset-bottom)) !important; }
-  /* ---- floating Adjust button: only on the Photo tab ---- */
   #literumAdjustBtn{ position:fixed; right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); z-index:1600;
     display:none; align-items:center; gap:7px; padding:13px 20px; border:none; border-radius:26px;
     font-weight:700; font-size:15px; color:#1a1408; cursor:pointer;
     background:linear-gradient(180deg,#e2b765,#b98a3a); box-shadow:0 5px 16px rgba(0,0,0,.55); }
   body[data-ed-tab="photo"] #literumAdjustBtn{ display:flex; }
   body.drawer-open #literumAdjustBtn{ bottom:calc(54vh + 12px); background:linear-gradient(180deg,#3a3d42,#26282c); color:#f0ead8; }
-  /* ---- VIDEO + GALLERY: stack every pane into one scrolling column (no overlap) ---- */
   #videoTab.active, #galleryTab.active{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; }
   .video-workspace, .gallery-workspace{ display:block !important; height:auto !important; min-height:0 !important; }
   .video-top-row, .preview-row{ display:block !important; }
@@ -6246,6 +6240,7 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
       <label>Also create these batches</label>
       <label class="checkbox-row"><input type="checkbox" id="variantBW"> Black &amp; white</label>
       <label class="checkbox-row"><input type="checkbox" id="variantSepia"> Sepia</label>
+      <label class="checkbox-row"><input type="checkbox" id="variantColour"> Colour — your edits, in colour</label>
       <label class="checkbox-row"><input type="checkbox" id="variantSocial"> Social media (≤1000px long edge, ≤1000KB)</label>
       <p class="hint-text">Each checked batch is saved into its own folder inside the folder above. Leave all unchecked to just export your regular edits.</p>
     </div>
@@ -15647,6 +15642,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   const variantBW = document.getElementById('variantBW');
   const variantSepia = document.getElementById('variantSepia');
   const variantSocial = document.getElementById('variantSocial');
+  const variantColour = document.getElementById('variantColour');
   const exportNameInput = document.getElementById('exportName');
   const exportFolderNameInput = document.getElementById('exportFolderName');
   const exportFormatSelect = document.getElementById('exportFormat');
@@ -15686,9 +15682,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
 
   function getBatchTargets(){
     // export the current filmstrip selection; if nothing is selected, export everything
-    return selectedIndices.size > 0
-      ? Array.from(selectedIndices).sort((a,b) => a-b)
-      : photos.map((_, i) => i);
+    return photos.map((_, i) => i);
   }
 
   function safeName(name){
@@ -15730,10 +15724,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     exportFolderNameInput.value = mode === 'batch' ? 'literum-export' : '';
 
     if(mode === 'batch'){
-      const targets = getBatchTargets();
-      exportModeHint.textContent = selectedIndices.size > 1
-        ? `Exporting your ${targets.length}-photo selection.`
-        : `Exporting all ${photos.length} photo${photos.length > 1 ? 's' : ''} — select multiple thumbnails first to export just some of them.`;
+      exportModeHint.textContent = `Exporting all ${photos.length} photo${photos.length > 1 ? 's' : ''} on the filmstrip.`;
     } else {
       exportModeHint.textContent = '';
     }
@@ -15782,6 +15773,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     variantBW.checked = false;
     variantSepia.checked = false;
     variantSocial.checked = false;
+    variantColour.checked = false;
     exportProgressBar.classList.add('hidden');
     exportProgressFill.style.width = '0%';
     exportProgressText.textContent = '';
@@ -16002,7 +15994,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   const exportFormControls = [
     exportModeSingleBtn, exportModeBatchBtn, exportNameInput, exportFolderNameInput,
     exportFormatSelect, exportScaleSelect, exportCustomWidthInput, exportQualityInput,
-    exportDestFolder, exportDestZip, exportCancelBtn, variantBW, variantSepia, variantSocial,
+    exportDestFolder, exportDestZip, exportCancelBtn, variantBW, variantSepia, variantSocial, variantColour,
   ];
   let exportRunning = false;
   function setExportRunning(running){
@@ -16176,6 +16168,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     if(variantBW.checked) variants.push({ key: 'bw', folder: 'Black and White', render: (p) => renderBWBlob(p, size, mime, quality), ext });
     if(variantSepia.checked) variants.push({ key: 'sepia', folder: 'Sepia', render: (p) => renderSepiaBlob(p, size, mime, quality), ext });
     if(variantSocial.checked) variants.push({ key: 'social', folder: 'Social Media', render: (p) => renderSocialBlob(p), ext: 'jpg' });
+    if(variantColour.checked) variants.push({ key: 'colour', folder: 'Colour', render: (p) => renderPhotoBlob(p, size, mime, quality), ext });
 
     // ask where to save BEFORE the slow rendering, while the browser still counts this as your click
     let parentHandle = null, zipHandle = null, fellBack = '';
@@ -21972,6 +21965,17 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       document.body.setAttribute('data-ed-tab', n||'photo'); if(n!=='photo') document.body.classList.remove('drawer-open'); }
     Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(t){ t.addEventListener('click',function(){ setTimeout(updTab,0); }); });
     updTab();
+    // swipe left/right across the photo to move between images
+    var cw=document.querySelector('.canvas-wrap');
+    if(cw){
+      var sx=0,sy=0,st=0,track=false;
+      cw.addEventListener('touchstart',function(e){ if(e.touches.length!==1){ track=false; return; } sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); track=true; },{passive:true});
+      cw.addEventListener('touchend',function(e){ if(!track) return; track=false; var t=e.changedTouches[0]; var dx=t.clientX-sx, dy=t.clientY-sy;
+        if(Date.now()-st<650 && Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){
+          var key=dx<0?'ArrowRight':'ArrowLeft';
+          window.dispatchEvent(new KeyboardEvent('keydown',{key:key,bubbles:true}));
+        } },{passive:true});
+    }
     // mobile export: send downloads to the Share sheet ("Save to Files" -> pick any folder)
     if(('share' in navigator) && !('showSaveFilePicker' in window)){
       document.addEventListener('click', function(e){
@@ -22005,5 +22009,4 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   document.getElementById('editBtn').addEventListener('click',function(){ loadFrame(ef,'editorSrc'); show(ef); });
   back.addEventListener('click',function(){ gf.classList.remove('on'); ef.classList.remove('on'); launcher.classList.remove('hidden'); back.classList.remove('on'); });
 </script>
-</body>
-</html>
+</body></html>
