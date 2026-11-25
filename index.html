@@ -5136,7 +5136,19 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .gallery-grid{ grid-template-columns:repeat(auto-fill,minmax(92px,1fr)) !important; min-height:0 !important; }
   .gallery-side, .gallery-side-scroll{ overflow:visible !important; height:auto !important; }
 }
-@media (min-width:821px){ #literumAdjustBtn{ display:none !important; } }
+  #pmDial{ position:fixed; left:8px; right:8px; bottom:calc(68px + env(safe-area-inset-bottom)); z-index:1600;
+    display:none; gap:7px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:3px 2px;
+    scrollbar-width:none; }
+  #pmDial::-webkit-scrollbar{ display:none; }
+  body[data-ed-tab="photo"] #pmDial{ display:flex; }
+  body.drawer-open #pmDial{ display:none; }
+  .pm-chip{ flex:0 0 auto; appearance:none; border:1px solid rgba(255,255,255,.18); cursor:pointer;
+    background:rgba(12,13,20,.78); color:#cfc9bb; font-family:ui-monospace,Menlo,monospace; font-weight:700;
+    font-size:12.5px; letter-spacing:.02em; padding:9px 13px; border-radius:20px; white-space:nowrap;
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); box-shadow:0 3px 9px rgba(0,0,0,.45); }
+  .pm-chip.on{ background:linear-gradient(180deg,#ffd76a,#e0a63a); color:#1a1408; border-color:rgba(0,0,0,.2); }
+}
+@media (min-width:821px){ #literumAdjustBtn, #pmDial{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -5352,6 +5364,10 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
       <div class="slider-row">
         <div class="row-top"><span>Temperature</span><span id="v-temperature">0.00</span></div>
         <input type="range" id="temperature" min="-1" max="1" step="0.01" value="0">
+      </div>
+      <div class="slider-row">
+        <div class="row-top"><span>Tint</span><span id="v-tint">0.00</span></div>
+        <input type="range" id="tint" min="-1" max="1" step="0.01" value="0" title="Green (-) to Magenta (+) white-balance shift">
       </div>
     </div>
   </div>
@@ -12893,10 +12909,10 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   document.getElementById('expandAllBtn').addEventListener('click', () => setAllGroupsCollapsed(false));
   document.getElementById('collapseAllBtn').addEventListener('click', () => setAllGroupsCollapsed(true));
 
-  const RECIPE_FIELDS = ['exposure','contrast','saturation','temperature','sharpen','vignette','shadows','highlights','noiseReduction','grain','halation','lutIntensity'];
+  const RECIPE_FIELDS = ['exposure','contrast','saturation','temperature','tint','sharpen','vignette','shadows','highlights','noiseReduction','grain','halation','lutIntensity'];
   const sliderIds = RECIPE_FIELDS;
   // lutId (a string: a film look or an imported LUT, '' = none) travels with the numeric fields below
-  const DEFAULT_RECIPE = { exposure:0, contrast:1, saturation:1, temperature:0, sharpen:0, vignette:0, shadows:0, highlights:0, noiseReduction:0, grain:0, halation:0, lutIntensity:1, lutId:'' };
+  const DEFAULT_RECIPE = { exposure:0, contrast:1, saturation:1, temperature:0, tint:0, sharpen:0, vignette:0, shadows:0, highlights:0, noiseReduction:0, grain:0, halation:0, lutIntensity:1, lutId:'' };
   const PERCENT_FIELDS = ['halation', 'lutIntensity'];
   const formatSliderValue = (id, v) => PERCENT_FIELDS.includes(id) ? Math.round(v * 100) + '%' : v.toFixed(2);
   let state = Object.assign({}, DEFAULT_RECIPE);
@@ -13844,6 +13860,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         contrast: recipe.contrast ?? 1,
         saturation: recipe.saturation ?? 1,
         temperature: recipe.temperature ?? 0,
+        tint: recipe.tint ?? 0,
         sharpen: recipe.sharpen ?? 0,
         vignette: recipe.vignette ?? 0,
         shadows: recipe.shadows ?? 0,
@@ -13989,6 +14006,10 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     const temp = recipe.temperature;                // -1..1
     const rShift = temp * 28;
     const bShift = -temp * 28;
+    const tint = recipe.tint || 0;      // -1..1  (+ magenta, - green)
+    const gShift = -tint * 28;          // magenta pulls green down
+    const rtShift = tint * 14;          // ...and red/blue up (and the reverse for green)
+    const btShift = tint * 14;
     const curveLUT = recipe.curve && !isIdentityCurve(recipe.curve) ? buildCurveLUT(recipe.curve) : null;
     const shadowRGB = tintPointToRGBOffset(recipe.shadowTint);
     const highlightRGB = tintPointToRGBOffset(recipe.highlightTint);
@@ -14002,9 +14023,9 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       let r = src[i], g = src[i+1], b = src[i+2];
 
       // exposure + white balance shift
-      r += exposureGain + rShift;
-      g += exposureGain;
-      b += exposureGain + bShift;
+      r += exposureGain + rShift + rtShift;
+      g += exposureGain + gShift;
+      b += exposureGain + bShift + btShift;
 
       // contrast around mid-grey
       r = (r-128)*contrast + 128;
@@ -14257,7 +14278,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     pushUndoSnapshot();
-    setSliders({exposure:0, contrast:1, saturation:1, temperature:0, sharpen:0, vignette:0, shadows:0, highlights:0, noiseReduction:0, grain:0, halation:0, lutIntensity:1, lutId:''});
+    setSliders({exposure:0, contrast:1, saturation:1, temperature:0, tint:0, sharpen:0, vignette:0, shadows:0, highlights:0, noiseReduction:0, grain:0, halation:0, lutIntensity:1, lutId:''});
     state.curve = cloneCurve(DEFAULT_CURVE);
     drawCurveWidget();
     state.shadowTint = clonePoint(DEFAULT_TINT);
@@ -22010,67 +22031,95 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       document.body.setAttribute('data-ed-tab', n||'photo'); if(n!=='photo') document.body.classList.remove('drawer-open'); }
     Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(t){ t.addEventListener('click',function(){ setTimeout(updTab,0); }); });
     updTab();
-    // gesture editing on the photo:
-    //   drag up/down      -> brightness (exposure slider)
-    //   diagonal TL<->BR  -> contrast (toward bottom-right raises, back lowers)
+    // ===== gesture editing =====
+    //   vertical drag          -> the ARMED adjustment (default Brightness; change it on the dial bar)
+    //   diagonal  (TL<->BR)  -> Contrast     (toward bottom-right raises)
+    //   diagonal  (TR<->BL)  -> Saturation   (toward top-right raises)
     //   quick horizontal flick -> previous / next photo
+    var PARAMS={
+      exposure:{lab:'Brightness',ic:'☀',min:-1,max:1},
+      temperature:{lab:'Warmth',ic:'♨',min:-1,max:1},
+      tint:{lab:'Tint',ic:'◐',min:-1,max:1},
+      highlights:{lab:'Highlights',ic:'◔',min:-1,max:1},
+      shadows:{lab:'Shadows',ic:'◕',min:-1,max:1},
+      saturation:{lab:'Saturation',ic:'◉',min:0,max:2},
+      contrast:{lab:'Contrast',ic:'◑',min:0,max:2},
+      vignette:{lab:'Vignette',ic:'◎',min:0,max:1},
+      sharpen:{lab:'Sharpen',ic:'▲',min:0,max:3},
+      grain:{lab:'Grain',ic:'▒',min:0,max:1},
+      halation:{lab:'Glow',ic:'✦',min:0,max:1}
+    };
+    var DIAL=['exposure','temperature','tint','highlights','shadows','saturation','contrast','vignette','sharpen','grain','halation'];
+    var armed='exposure';
+    function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+    function setSlider(el,val){ if(!el) return; el.value=String(val); el.dispatchEvent(new Event('input',{bubbles:true})); }
+    function commitSlider(el){ if(!el) return; el.dispatchEvent(new Event('change',{bubbles:true})); }
+    function fmt(id,v){ var pr=PARAMS[id]; var s=((pr.min<0&&v>=0)?'+':'')+v.toFixed(2);
+      if(id==='tint') s=((v>=0)?'+':'')+v.toFixed(2)+(v>0?' M':(v<0?' G':'')); return pr.ic+' '+pr.lab+'  '+s; }
+
+    // on-screen readout
+    var hud=document.createElement('div'); hud.id='pmGestureHud';
+    hud.style.cssText='position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:4000;'
+      +'padding:10px 18px;border-radius:24px;background:rgba(8,9,14,.82);color:#ffe14d;'
+      +'font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:17px;letter-spacing:.03em;'
+      +'box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;opacity:0;transition:opacity .15s;'
+      +'-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);white-space:nowrap;';
+    document.body.appendChild(hud);
+    var hudT=null;
+    function showHud(txt){ hud.textContent=txt; hud.style.opacity='1'; if(hudT) clearTimeout(hudT); }
+    function hideHud(){ if(hudT) clearTimeout(hudT); hudT=setTimeout(function(){ hud.style.opacity='0'; },750); }
+
+    // dial chip-bar: pick what the vertical drag controls
+    var dial=document.createElement('div'); dial.id='pmDial';
+    DIAL.forEach(function(id){ var pr=PARAMS[id]; var c=document.createElement('button');
+      c.type='button'; c.className='pm-chip'+(id===armed?' on':''); c.setAttribute('data-id',id);
+      c.textContent=pr.ic+' '+pr.lab;
+      c.addEventListener('click',function(){
+        armed=id;
+        Array.prototype.forEach.call(dial.children,function(ch){ ch.classList.toggle('on', ch.getAttribute('data-id')===id); });
+        var el=document.getElementById(id); showHud(fmt(id, el?parseFloat(el.value):0)); hideHud();
+      });
+      dial.appendChild(c);
+    });
+    document.body.appendChild(dial);
+
     var gestureTarget=document.querySelector('.stage')||document.querySelector('.canvas-wrap');
     if(gestureTarget){
-      var expoEl=document.getElementById('exposure');
-      var contEl=document.getElementById('contrast');
-      function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-      function setSlider(el,val){ if(!el) return; el.value=String(val); el.dispatchEvent(new Event('input',{bubbles:true})); }
-      function commitSlider(el){ if(!el) return; el.dispatchEvent(new Event('change',{bubbles:true})); }
-      // little on-screen readout so the gesture is visibly confirmed
-      var hud=document.createElement('div'); hud.id='pmGestureHud';
-      hud.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:4000;'
-        +'padding:10px 18px;border-radius:24px;background:rgba(8,9,14,.82);color:#ffe14d;'
-        +'font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:17px;letter-spacing:.03em;'
-        +'box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;opacity:0;transition:opacity .15s;'
-        +'-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);white-space:nowrap;';
-      document.body.appendChild(hud);
-      var hudT=null;
-      function showHud(txt){ hud.textContent=txt; hud.style.opacity='1'; if(hudT) clearTimeout(hudT); }
-      function hideHud(){ if(hudT) clearTimeout(hudT); hudT=setTimeout(function(){ hud.style.opacity='0'; },700); }
       var g=null;
       gestureTarget.addEventListener('touchstart',function(e){
         if(e.touches.length!==1){ g=null; return; }
         var t=e.touches[0], r=gestureTarget.getBoundingClientRect();
-        g={ x0:t.clientX, y0:t.clientY, t0:Date.now(), rect:r,
-            baseE: expoEl?parseFloat(expoEl.value):0, baseC: contEl?parseFloat(contEl.value):1,
-            mode:null };
+        g={ x0:t.clientX, y0:t.clientY, t0:Date.now(), rect:r, mode:null, id:null, base:0 };
       },{passive:true});
       gestureTarget.addEventListener('touchmove',function(e){
         if(!g || e.touches.length!==1){ return; }
         var t=e.touches[0], dx=t.clientX-g.x0, dy=t.clientY-g.y0;
         if(g.mode===null){
           if(Math.abs(dx)<12 && Math.abs(dy)<12){ return; }
-          var ratio = Math.abs(dx)/(Math.abs(dy)||1);
-          var diagLike = Math.abs(dx)>14 && Math.abs(dy)>14 && ratio>0.5 && ratio<2.0;
-          if(diagLike){ g.mode='contrast'; }
-          else if(Math.abs(dy) > Math.abs(dx)*1.2){ g.mode='brightness'; }
+          var ratio=Math.abs(dx)/(Math.abs(dy)||1);
+          var diagLike=Math.abs(dx)>14 && Math.abs(dy)>14 && ratio>0.5 && ratio<2.0;
+          if(diagLike){ g.mode=(dx*dy>0)?'contrast':'saturation'; }
+          else if(Math.abs(dy) > Math.abs(dx)*1.2){ g.mode='vparam'; }
           else { g.mode='swipe'; }
+          g.id = g.mode==='contrast'?'contrast' : g.mode==='saturation'?'saturation' : g.mode==='vparam'?armed : null;
+          if(g.id){ var el0=document.getElementById(g.id); g.base=el0?parseFloat(el0.value):0; }
         }
-        if(g.mode==='brightness' || g.mode==='contrast'){
-          if(e.cancelable) e.preventDefault();   // stop the page from panning under the gesture
-          if(g.mode==='brightness'){
-            var nv=clamp(g.baseE + (-dy / g.rect.height)*1.8, -1, 1);
-            setSlider(expoEl, nv.toFixed(3));
-            showHud((nv>=0?'☀ +':'☀ ')+nv.toFixed(2));          // sun
-          } else {
-            var proj=(dx + dy)/Math.hypot(g.rect.width,g.rect.height);
-            var cv=clamp(g.baseC + proj*2.4, 0, 2);
-            setSlider(contEl, cv.toFixed(3));
-            showHud('◑ '+cv.toFixed(2)+'×');                     // half-moon = contrast
-          }
+        if(g.id){
+          if(e.cancelable) e.preventDefault();  // stop the page panning under the gesture
+          var pr=PARAMS[g.id], span=pr.max-pr.min, diag=Math.hypot(g.rect.width,g.rect.height), frac;
+          if(g.mode==='vparam') frac=(-dy/g.rect.height);
+          else if(g.mode==='contrast') frac=(dx+dy)/diag;   // toward bottom-right = up
+          else frac=(dx-dy)/diag;                           // saturation: toward top-right = up
+          var nv=clamp(g.base + frac*span*0.9, pr.min, pr.max);
+          setSlider(document.getElementById(g.id), nv.toFixed(3));
+          showHud(fmt(g.id, nv));
         }
       },{passive:false});
       gestureTarget.addEventListener('touchend',function(e){
         if(!g){ return; }
         var m=g.mode, dur=Date.now()-g.t0, t=e.changedTouches[0];
         var dx=t.clientX-g.x0, dy=t.clientY-g.y0;
-        if(m==='brightness'){ commitSlider(expoEl); hideHud(); }
-        else if(m==='contrast'){ commitSlider(contEl); hideHud(); }
+        if(g.id){ commitSlider(document.getElementById(g.id)); hideHud(); }
         else if((m==='swipe'||m===null) && dur<650 && Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){
           window.dispatchEvent(new KeyboardEvent('keydown',{key: dx<0?'ArrowRight':'ArrowLeft', bubbles:true}));
         }
