@@ -18725,14 +18725,18 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   function browserCanPlay(url, kind){
     return new Promise(resolve => {
       const el = document.createElement(kind === 'audio' ? 'audio' : 'video');
-      el.preload = 'auto'; el.muted = true;
+      el.preload = 'auto'; el.muted = true; el.playsInline = true;
+      el.setAttribute('playsinline',''); el.setAttribute('webkit-playsinline','');
+      el.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(el);
       let done = false;
-      const finish = (ok) => { if(done) return; done = true; clearTimeout(timer); el.removeAttribute('src'); try{ el.load(); } catch(e){ /* ignore */ } resolve(ok); };
-      const timer = setTimeout(() => finish(false), 9000);
+      const finish = (ok) => { if(done) return; done = true; clearTimeout(timer); try{ el.removeAttribute('src'); el.load(); } catch(e){} try{ el.remove(); } catch(e){} resolve(ok); };
+      const timer = setTimeout(() => finish(false), 12000);
       el.addEventListener('error', () => finish(false));
       if(kind === 'audio') el.addEventListener('loadedmetadata', () => finish(isFinite(el.duration) && el.duration > 0));
-      else el.addEventListener('loadeddata', () => finish(el.videoWidth > 0 && el.videoHeight > 0));
+      else { const chk = () => { if(el.videoWidth > 0 && el.videoHeight > 0) finish(true); }; el.addEventListener('loadedmetadata', chk); el.addEventListener('loadeddata', chk); }
       el.src = url;
+      try{ el.load(); const pr = el.play(); if(pr && pr.catch) pr.catch(function(){}); } catch(e){}
     });
   }
   const CONVERT_LIMIT_BYTES = 1.2 * 1024 * 1024 * 1024;
@@ -18827,7 +18831,11 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     const needConvert = [];
     for(const it of files){
       const url = URL.createObjectURL(it.file);
-      if(await browserCanPlay(url, it.kind)) addMediaClip(it.file.name, url, it.kind);
+      const _ext = (it.file.name.split('.').pop()||'').toLowerCase();
+      const _native = it.kind==='video'
+        ? (/^video\/(mp4|quicktime|m4v|x-m4v)$/.test(it.file.type) || ['mp4','mov','m4v'].includes(_ext))
+        : (/^audio\/(mp4|aac|mpeg|x-m4a)$/.test(it.file.type) || ['m4a','mp3','aac'].includes(_ext));
+      if(_native || await browserCanPlay(url, it.kind)) addMediaClip(it.file.name, url, it.kind);
       else { URL.revokeObjectURL(url); needConvert.push(it); }
     }
     renderMediaList();
