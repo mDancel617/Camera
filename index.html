@@ -5328,6 +5328,20 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .pm-chip.on{ background:linear-gradient(180deg,#ffd76a,#e0a63a); color:#1a1408; border-color:rgba(0,0,0,.2); }
 }
 @media (min-width:821px){ #literumAdjustBtn, #pmDial, #pmBurger, #pmBurgerMenu{ display:none !important; } }
+/* "Your video is ready" save/share sheet — lets the save run inside a fresh tap on mobile */
+#pmSaveOverlay{ position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; padding:24px;
+  background:rgba(0,0,0,.62); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+.pm-save-card{ width:min(360px,90vw); background:#15151f; border:1px solid rgba(255,255,255,.14); border-radius:18px;
+  padding:24px 20px calc(18px + env(safe-area-inset-bottom)); text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+.pm-save-check{ width:54px; height:54px; margin:0 auto 12px; border-radius:50%; background:linear-gradient(180deg,#5fd38a,#2fae63); color:#06220f;
+  display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; }
+.pm-save-title{ color:#fff; font-size:19px; font-weight:800; margin-bottom:4px; }
+.pm-save-sub{ color:#b9b4a8; font-size:13px; margin-bottom:18px; word-break:break-all; }
+.pm-save-btn{ display:block; width:100%; appearance:none; border:none; cursor:pointer; border-radius:14px; padding:16px; font-size:16px; font-weight:800;
+  color:#07121a; background:linear-gradient(180deg,#5cf0ff,#20bfe6); box-shadow:0 6px 18px rgba(32,191,230,.4); margin-bottom:10px; font-family:inherit; }
+.pm-save-btn:active{ transform:scale(.98); }
+.pm-save-close{ display:block; width:100%; appearance:none; border:1px solid rgba(255,255,255,.18); background:transparent; color:#cfc9bb; cursor:pointer;
+  border-radius:14px; padding:12px; font-size:14px; font-weight:600; font-family:inherit; }
 </style>
 </head>
 <body>
@@ -22539,25 +22553,41 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         g=null;
       },{passive:true});
     }
-    // mobile export: send downloads to the Share sheet ("Save to Files" -> pick any folder)
-    if(('share' in navigator) && !('showSaveFilePicker' in window)){
-      document.addEventListener('click', function(e){
-        var a=(e.target && e.target.closest) ? e.target.closest('a[download]') : null;
-        if(!a || a.__pmSkip) return;
-        var href=a.getAttribute('href')||''; if(!/^blob:|^data:/.test(href)) return;
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    // mobile export: an export's save/download fires AFTER the multi-second encode, so the user's tap
+    // has expired and iOS blocks navigator.share()/download. Catch the download, then show a "Save /
+    // Share video" button the user taps (a fresh gesture) so the share sheet actually opens.
+    function pmShowSave(file, name){
+      var old=document.getElementById('pmSaveOverlay'); if(old) old.remove();
+      var ov=document.createElement('div'); ov.id='pmSaveOverlay';
+      var mb=(file.size/1048576).toFixed(1);
+      ov.innerHTML='<div class="pm-save-card"><div class="pm-save-check">\u2713</div><div class="pm-save-title">Your video is ready</div>'
+        +'<div class="pm-save-sub">'+name+' \u00b7 '+mb+' MB</div>'
+        +'<button class="pm-save-btn" type="button">Save / Share video</button>'
+        +'<button class="pm-save-close" type="button">Close</button></div>';
+      document.body.appendChild(ov);
+      ov.querySelector('.pm-save-btn').addEventListener('click', function(){
         (async function(){
-          var name=a.getAttribute('download')||'export';
-          try{
-            var blob=await (await fetch(href)).blob();
-            var file=new File([blob],name,{type:blob.type||'application/octet-stream'});
-            if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return; }
-          }catch(err){ if(err && err.name==='AbortError') return; }
-          var la=document.createElement('a'); la.__pmSkip=true; la.href=href; la.download=name;
-          document.body.appendChild(la); la.click(); la.remove();
+          try{ if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:name}); ov.remove(); return; } }
+          catch(err){ if(err && err.name==='AbortError') return; }
+          var url=URL.createObjectURL(file); var a=document.createElement('a'); a.__pmSkip=true; a.href=url; a.download=name;
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); },10000); ov.remove();
         })();
-      }, true);
+      });
+      ov.querySelector('.pm-save-close').addEventListener('click', function(){ ov.remove(); });
+      ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
     }
+    document.addEventListener('click', function(e){
+      if('showSaveFilePicker' in window) return;     // desktop/Chrome uses the native Save dialog
+      var a=(e.target && e.target.closest) ? e.target.closest('a[download]') : null;
+      if(!a || a.__pmSkip) return;
+      var href=a.getAttribute('href')||''; if(!/^blob:|^data:/.test(href)) return;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      var name=a.getAttribute('download')||'export';
+      fetch(href).then(function(r){ return r.blob(); }).then(function(blob){
+        pmShowSave(new File([blob],name,{type:blob.type||'application/octet-stream'}), name);
+      }).catch(function(){ /* if we can't read it, let the browser try a normal download */
+        var la=document.createElement('a'); la.__pmSkip=true; la.href=href; la.download=name; document.body.appendChild(la); la.click(); la.remove(); });
+    }, true);
   });
 })();
 <\/script>
