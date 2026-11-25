@@ -20,11 +20,16 @@
   .lch-foot{color:#4a4a6a;font-size:11px;letter-spacing:.2em;text-align:center;}
   .appframe{position:fixed;inset:0;border:0;width:100%;height:100%;display:none;background:#000;z-index:5;}
   .appframe.on{display:block;}
-  #backMenu{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);z-index:9999;display:none;
+  #backMenu{position:fixed;top:calc(env(safe-area-inset-top) + 52px);right:calc(env(safe-area-inset-right) + 8px);z-index:9999;display:none;
     appearance:none;border:1px solid rgba(255,255,255,.3);background:rgba(10,10,22,.72);color:#eaeaf2;font-family:inherit;font-size:12px;font-weight:700;
     letter-spacing:.08em;padding:9px 12px;border-radius:20px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 3px 10px rgba(0,0,0,.5);}
   #backMenu.on{display:block;}
   #backMenu:active{transform:scale(.96);}
+  #undoBtn{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);z-index:9999;display:none;
+    appearance:none;border:1px solid rgba(255,255,255,.3);background:rgba(10,10,22,.72);color:#ffd76a;font-family:inherit;font-size:12px;font-weight:700;
+    letter-spacing:.08em;padding:9px 12px;border-radius:20px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 3px 10px rgba(0,0,0,.5);}
+  #undoBtn.on{display:block;}
+  #undoBtn:active{transform:scale(.96);}
 </style></head>
 <body>
 <div id="launcher">
@@ -38,6 +43,7 @@
 </div>
 <iframe id="gameFrame" class="appframe" title="Photo Master game" allow="camera; microphone; geolocation; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
 <iframe id="editorFrame" class="appframe" title="Literum editor" allow="camera; microphone; fullscreen"></iframe>
+<button id="undoBtn">↶ UNDO</button>
 <button id="backMenu">⇄ MENU</button>
 <script type="text/html" id="gameSrc"><!doctype html>
 <html lang="en">
@@ -5081,6 +5087,7 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .thumb-add span{ font-size:28px; line-height:1; font-weight:400; }
   .thumb-add:hover{ background:rgba(212,162,78,.16); }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link id="literum-webfonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Oswald:wght@400;700&family=Raleway:wght@400;700&family=Work+Sans:wght@400;700&family=Anton&family=Bebas+Neue&family=Archivo+Black&family=Fjalla+One&family=Playfair+Display:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Abril+Fatface&family=DM+Serif+Display&family=Cinzel:wght@400;700&family=Roboto+Slab:wght@400;700&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Caveat:wght@400;700&family=Permanent+Marker&family=Satisfy&family=Sacramento&family=Shadows+Into+Light&family=Bangers&family=Fredoka&family=Righteous&family=Bungee&family=Monoton&family=Press+Start+2P&family=Creepster&family=Roboto+Mono:wght@400;700&family=Source+Code+Pro:wght@400;700&display=swap">
 <style id="literum-mobile">
 @media (max-width:820px){
   .brand-bar{ padding:8px 14px !important; }
@@ -5485,6 +5492,43 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
               <option value="Impact, 'Arial Narrow', sans-serif">Impact</option>
               <option value="'Comic Sans MS', 'Comic Sans', cursive">Comic Sans</option>
               <option value="'Brush Script MT', cursive">Script</option>
+              <optgroup label="Web fonts">
+              <option value="'Montserrat', sans-serif">Montserrat</option>
+              <option value="'Poppins', sans-serif">Poppins</option>
+              <option value="'Oswald', sans-serif">Oswald</option>
+              <option value="'Raleway', sans-serif">Raleway</option>
+              <option value="'Work Sans', sans-serif">Work Sans</option>
+              <option value="'Anton', sans-serif">Anton</option>
+              <option value="'Bebas Neue', sans-serif">Bebas Neue</option>
+              <option value="'Archivo Black', sans-serif">Archivo Black</option>
+              <option value="'Fjalla One', sans-serif">Fjalla One</option>
+              <option value="'Playfair Display', serif">Playfair Display</option>
+              <option value="'Merriweather', serif">Merriweather</option>
+              <option value="'Lora', serif">Lora</option>
+              <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+              <option value="'Abril Fatface', serif">Abril Fatface</option>
+              <option value="'DM Serif Display', serif">DM Serif Display</option>
+              <option value="'Cinzel', serif">Cinzel</option>
+              <option value="'Roboto Slab', serif">Roboto Slab</option>
+              <option value="'Pacifico', cursive">Pacifico</option>
+              <option value="'Lobster', cursive">Lobster</option>
+              <option value="'Dancing Script', cursive">Dancing Script</option>
+              <option value="'Great Vibes', cursive">Great Vibes</option>
+              <option value="'Caveat', cursive">Caveat</option>
+              <option value="'Permanent Marker', cursive">Permanent Marker</option>
+              <option value="'Satisfy', cursive">Satisfy</option>
+              <option value="'Sacramento', cursive">Sacramento</option>
+              <option value="'Shadows Into Light', cursive">Shadows Into Light</option>
+              <option value="'Bangers', cursive">Bangers</option>
+              <option value="'Fredoka', sans-serif">Fredoka</option>
+              <option value="'Righteous', sans-serif">Righteous</option>
+              <option value="'Bungee', sans-serif">Bungee</option>
+              <option value="'Monoton', sans-serif">Monoton</option>
+              <option value="'Press Start 2P', monospace">Press Start 2P</option>
+              <option value="'Creepster', cursive">Creepster</option>
+              <option value="'Roboto Mono', monospace">Roboto Mono</option>
+              <option value="'Source Code Pro', monospace">Source Code Pro</option>
+              </optgroup>
             </select>
           </label>
           <div class="brush-tool-row">
@@ -21965,16 +22009,60 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       document.body.setAttribute('data-ed-tab', n||'photo'); if(n!=='photo') document.body.classList.remove('drawer-open'); }
     Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(t){ t.addEventListener('click',function(){ setTimeout(updTab,0); }); });
     updTab();
-    // swipe left/right across the photo to move between images
+    // gesture editing on the photo:
+    //   drag up/down      -> brightness (exposure slider)
+    //   diagonal from a corner toward the opposite corner -> contrast (increase out, decrease back)
+    //   quick horizontal flick -> previous / next photo
     var cw=document.querySelector('.canvas-wrap');
     if(cw){
-      var sx=0,sy=0,st=0,track=false;
-      cw.addEventListener('touchstart',function(e){ if(e.touches.length!==1){ track=false; return; } sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); track=true; },{passive:true});
-      cw.addEventListener('touchend',function(e){ if(!track) return; track=false; var t=e.changedTouches[0]; var dx=t.clientX-sx, dy=t.clientY-sy;
-        if(Date.now()-st<650 && Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){
-          var key=dx<0?'ArrowRight':'ArrowLeft';
-          window.dispatchEvent(new KeyboardEvent('keydown',{key:key,bubbles:true}));
-        } },{passive:true});
+      var expoEl=document.getElementById('exposure');
+      var contEl=document.getElementById('contrast');
+      function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+      function setSlider(el,val){ if(!el) return; el.value=String(val); el.dispatchEvent(new Event('input',{bubbles:true})); }
+      function commitSlider(el){ if(!el) return; el.dispatchEvent(new Event('change',{bubbles:true})); }
+      var g=null;
+      cw.addEventListener('touchstart',function(e){
+        if(e.touches.length!==1){ g=null; return; }
+        var t=e.touches[0], r=cw.getBoundingClientRect();
+        g={ x0:t.clientX, y0:t.clientY, t0:Date.now(), rect:r,
+            nx:(t.clientX-r.left)/r.width, ny:(t.clientY-r.top)/r.height,
+            baseE: expoEl?parseFloat(expoEl.value):0, baseC: contEl?parseFloat(contEl.value):1,
+            mode:null, cx:0, cy:0 };
+      },{passive:true});
+      cw.addEventListener('touchmove',function(e){
+        if(!g || e.touches.length!==1){ return; }
+        var t=e.touches[0], dx=t.clientX-g.x0, dy=t.clientY-g.y0;
+        if(g.mode===null){
+          if(Math.abs(dx)<14 && Math.abs(dy)<14){ return; }
+          var cornerX = g.nx<0.34?-1:(g.nx>0.66?1:0);
+          var cornerY = g.ny<0.34?-1:(g.ny>0.66?1:0);
+          var ratio = Math.abs(dx)/(Math.abs(dy)||1);
+          var diagLike = Math.abs(dx)>16 && Math.abs(dy)>16 && ratio>0.45 && ratio<2.2;
+          if(cornerX!==0 && cornerY!==0 && diagLike){ g.mode='contrast'; g.cx=cornerX; g.cy=cornerY; }
+          else if(Math.abs(dy) > Math.abs(dx)*1.25){ g.mode='brightness'; }
+          else { g.mode='swipe'; }
+        }
+        if(g.mode==='brightness'){
+          var dE=(-dy / g.rect.height)*1.8;
+          setSlider(expoEl, clamp(g.baseE+dE,-1,1).toFixed(3));
+        } else if(g.mode==='contrast'){
+          // diagonal along the top-left <-> bottom-right axis: toward bottom-right raises
+          // contrast, back toward top-left lowers it (start from either corner)
+          var proj=(dx + dy)/Math.hypot(g.rect.width,g.rect.height);
+          setSlider(contEl, clamp(g.baseC + proj*2.4, 0, 2).toFixed(3));
+        }
+      },{passive:true});
+      cw.addEventListener('touchend',function(e){
+        if(!g){ return; }
+        var m=g.mode, dur=Date.now()-g.t0, t=e.changedTouches[0];
+        var dx=t.clientX-g.x0, dy=t.clientY-g.y0;
+        if(m==='brightness'){ commitSlider(expoEl); }
+        else if(m==='contrast'){ commitSlider(contEl); }
+        else if((m==='swipe'||m===null) && dur<650 && Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){
+          window.dispatchEvent(new KeyboardEvent('keydown',{key: dx<0?'ArrowRight':'ArrowLeft', bubbles:true}));
+        }
+        g=null;
+      },{passive:true});
     }
     // mobile export: send downloads to the Share sheet ("Save to Files" -> pick any folder)
     if(('share' in navigator) && !('showSaveFilePicker' in window)){
@@ -21998,15 +22086,27 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   });
 })();
 <\/script>
+<script id="literum-webfonts-js">
+(function(){
+  var fams=["Montserrat", "Poppins", "Oswald", "Raleway", "Work Sans", "Anton", "Bebas Neue", "Archivo Black", "Fjalla One", "Playfair Display", "Merriweather", "Lora", "Cormorant Garamond", "Abril Fatface", "DM Serif Display", "Cinzel", "Roboto Slab", "Pacifico", "Lobster", "Dancing Script", "Great Vibes", "Caveat", "Permanent Marker", "Satisfy", "Sacramento", "Shadows Into Light", "Bangers", "Fredoka", "Righteous", "Bungee", "Monoton", "Press Start 2P", "Creepster", "Roboto Mono", "Source Code Pro"];
+  function kick(){ var inp=document.getElementById('layerFontFamilyInput'); if(inp) inp.dispatchEvent(new Event('change',{bubbles:true})); }
+  if(document.fonts && document.fonts.load){
+    var jobs=[];
+    fams.forEach(function(f){ jobs.push(document.fonts.load("16px '"+f+"'").catch(function(){})); jobs.push(document.fonts.load("700 16px '"+f+"'").catch(function(){})); });
+    Promise.all(jobs).then(kick);
+  }
+})();
+<\/script>
 </body>
 </html></script>
 <script>
-  var launcher=document.getElementById('launcher'), back=document.getElementById('backMenu');
+  var launcher=document.getElementById('launcher'), back=document.getElementById('backMenu'), undo=document.getElementById('undoBtn');
   var gf=document.getElementById('gameFrame'), ef=document.getElementById('editorFrame');
   function loadFrame(fr,srcId){ if(!fr.getAttribute('data-loaded')){ fr.srcdoc=document.getElementById(srcId).textContent.replace(/<\\\/script>/g,'<\/script>'); fr.setAttribute('data-loaded','1'); } }
-  function show(fr){ gf.classList.remove('on'); ef.classList.remove('on'); fr.classList.add('on'); launcher.classList.add('hidden'); back.classList.add('on'); }
+  function show(fr){ gf.classList.remove('on'); ef.classList.remove('on'); fr.classList.add('on'); launcher.classList.add('hidden'); back.classList.add('on'); undo.classList.toggle('on', fr===ef); }
   document.getElementById('playBtn').addEventListener('click',function(){ loadFrame(gf,'gameSrc'); show(gf); });
   document.getElementById('editBtn').addEventListener('click',function(){ loadFrame(ef,'editorSrc'); show(ef); });
-  back.addEventListener('click',function(){ gf.classList.remove('on'); ef.classList.remove('on'); launcher.classList.remove('hidden'); back.classList.remove('on'); });
+  back.addEventListener('click',function(){ gf.classList.remove('on'); ef.classList.remove('on'); launcher.classList.remove('hidden'); back.classList.remove('on'); undo.classList.remove('on'); });
+  undo.addEventListener('click',function(){ if(!ef.contentWindow) return; var W=ef.contentWindow; try{ W.dispatchEvent(new W.KeyboardEvent('keydown',{key:'z',ctrlKey:true,metaKey:true,bubbles:true})); }catch(err){ W.dispatchEvent(new KeyboardEvent('keydown',{key:'z',ctrlKey:true,metaKey:true,bubbles:true})); } });
 </script>
 </body></html>
