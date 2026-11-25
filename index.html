@@ -18703,6 +18703,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if(file.type.startsWith('audio/') || MEDIA_AUDIO_EXTS.includes(ext)) return 'audio';
     if(file.type.startsWith('video/') || MEDIA_VIDEO_EXTS.includes(ext)) return 'video';
+    if(!file.type && !MEDIA_AUDIO_EXTS.includes(ext)) return 'video';   // iOS can hand us a typeless video
     return null;
   }
   // can THIS browser actually play it? (video: the first picture has to decode; audio: it has to report a length)
@@ -22168,6 +22169,19 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       if(el.parentElement!==document.body){ try{ document.body.appendChild(el); }catch(e){} }
       el.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;display:block;';
     });
+    // import feedback: on iOS the native picker gives no in-app confirmation, so keep the Library sheet
+    // open and toast when clips actually land (or when an import seems to have produced nothing)
+    (function(){
+      var vfi=document.getElementById('videoFileInput'), list=document.getElementById('mediaList');
+      function toast(msg,ms){ var h=document.getElementById('pmGestureHud'); if(!h) return; h.textContent=msg; h.style.opacity='1'; if(h.__it) clearTimeout(h.__it); h.__it=setTimeout(function(){ h.style.opacity='0'; }, ms||2600); }
+      if(vfi){ vfi.addEventListener('change', function(){
+        document.body.classList.add('lib-open');
+        var before = list ? list.children.length : 0;
+        toast('Importing\u2026 large videos can take a moment', 5000);
+        setTimeout(function(){ if(list && list.children.length<=before) toast('Still working\u2014 if nothing appears, the clip may need converting', 4000); }, 9000);
+      }); }
+      if(list){ try{ new MutationObserver(function(muts){ var n=0; muts.forEach(function(m){ n+=m.addedNodes.length; }); if(n>0){ document.body.classList.add('lib-open'); toast('\u2713 Added to Library', 1800); } }).observe(list,{childList:true}); }catch(e){} }
+    })();
     if(!document.getElementById('literumAdjustBtn')){
       var b=document.createElement('button'); b.id='literumAdjustBtn'; b.type='button'; b.textContent='⚙ Adjust';
       document.body.appendChild(b);
