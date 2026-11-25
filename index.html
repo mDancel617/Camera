@@ -5129,7 +5129,7 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
     aspect-ratio:16/9; min-height:0 !important; margin:0 0 10px !important; border-radius:10px !important;
     border:1px solid var(--panel-line); position:relative !important; }
   .preview-box video{ max-height:100% !important; max-width:100% !important; }
-  #timelinePreviewBox .sequence-frame{ width:100% !important; height:100% !important; max-width:100% !important; max-height:100% !important; }
+  #timelinePreviewBox .sequence-frame{ max-width:100% !important; max-height:100% !important; }
   .preview-label{ max-width:60% !important; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px !important; }
   .preview-guide-btn{ top:auto !important; bottom:8px !important; right:8px !important; padding:7px 12px !important; font-size:12px !important; }
   .preview-placeholder{ font-size:14px !important; }
@@ -5213,16 +5213,31 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   /* hide desktop chrome */
   body.v-rush #libraryPreviewBox, body.v-rush .timeline-toolbar, body.v-rush .timeline-settings-row,
   body.v-rush #toolHint, body.v-rush .timeline-resize-handle, body.v-rush .timelines-section{ display:none !important; }
+  /* aspect switcher (vertical-first for mobile content) */
+  #vRushAspect{ position:absolute; left:14px; top:calc(var(--vrt,8px) + 8px); z-index:7; display:none; gap:5px; }
+  body.v-rush #vRushAspect{ display:flex; }
+  .vr-asp{ appearance:none; border:1px solid rgba(255,255,255,.2); background:rgba(10,10,16,.62); color:#cfc9bb;
+    font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:11px; padding:6px 10px; border-radius:14px; cursor:pointer;
+    -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
+  .vr-asp.on{ background:linear-gradient(180deg,#ffd76a,#e0a63a); color:#1a1408; border-color:transparent; }
   /* preview = hero; --vrt is measured so it clears the floating MENU/UNDO buttons */
-  body.v-rush #timelinePreviewBox{ position:absolute !important; left:8px; right:8px; top:var(--vrt,8px); height:36% !important;
+  body.v-rush #timelinePreviewBox{ position:absolute !important; left:8px; right:8px; top:var(--vrt,8px); height:42% !important;
     aspect-ratio:auto !important; margin:0 !important; border-radius:12px !important; border:1px solid var(--panel-line);
     background:#000 !important; z-index:5; }
   body.v-rush #timelinePreviewBox .preview-label,
   body.v-rush #timelinePreviewBox .preview-guide-btn{ display:none !important; }
   body.v-rush #timelinePreviewBox .sequence-frame.show-guides::after{ display:none !important; }
   body.v-rush #timelinePreviewBox .preview-placeholder{ position:absolute !important; inset:0; display:flex; align-items:center; justify-content:center; }
+  /* one clean preview — hide the native iOS video control overlay (the "double preview") */
+  #timelinePreview::-webkit-media-controls, #timelinePreview::-webkit-media-controls-enclosure,
+  #timelinePreview::-webkit-media-controls-panel, #timelinePreview::-webkit-media-controls-start-playback-button{
+    display:none !important; -webkit-appearance:none !important; opacity:0 !important; }
+  /* touch-first timeline: drag clips and trim edges with a finger (not scroll); bigger trim handles */
+  body.v-rush .timeline-clip{ touch-action:none !important; }
+  body.v-rush .trim-handle{ width:24px !important; }
+  body.v-rush .trim-handle::before{ width:6px !important; opacity:.6 !important; }
   /* transport row */
-  #vRushTransport{ position:absolute; left:0; right:0; top:calc(var(--vrt,8px) + 36% + 8px); height:50px; display:none;
+  #vRushTransport{ position:absolute; left:0; right:0; top:calc(var(--vrt,8px) + 42% + 8px); height:50px; display:none;
     align-items:center; justify-content:center; gap:30px; z-index:6; }
   body.v-rush #vRushTransport{ display:flex; }
   .vr-tp{ appearance:none; border:none; background:transparent; color:#e8e6df; font-size:22px; cursor:pointer;
@@ -5230,7 +5245,7 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .vr-tp.vr-play{ background:#fff; color:#111; font-size:22px; box-shadow:0 4px 14px rgba(0,0,0,.5); }
   .vr-tp:active{ transform:scale(.94); }
   /* timeline band */
-  body.v-rush .timeline-scroll{ position:absolute !important; left:0; right:0; top:calc(var(--vrt,8px) + 36% + 66px); bottom:84px;
+  body.v-rush .timeline-scroll{ position:absolute !important; left:0; right:0; top:calc(var(--vrt,8px) + 42% + 66px); bottom:84px;
     max-height:none !important; height:auto !important; border-top:1px solid var(--panel-line); border-bottom:1px solid var(--panel-line);
     background:#0a0b0d; z-index:4; }
   /* bottom tool bar */
@@ -22182,6 +22197,37 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       }); }
       if(list){ try{ new MutationObserver(function(muts){ var n=0; muts.forEach(function(m){ n+=m.addedNodes.length; }); if(n>0){ document.body.classList.add('lib-open'); toast('\u2713 Added to Library', 1800); } }).observe(list,{childList:true}); }catch(e){} }
     })();
+    // iOS: a file <input> inside an iframe (our editor is a srcdoc iframe) opens the picker but often
+    // never returns the chosen files. Route every Import through an input in the TOP-LEVEL document,
+    // then hand the picked files to the editor's own input so its unchanged import logic runs.
+    (function(){
+      var P; try{ P=window.parent; if(!P || P===window || !P.document) return; }catch(e){ return; }
+      var pdoc=P.document, bridge=pdoc.getElementById('pmFileBridge');
+      if(!bridge){ bridge=pdoc.createElement('input'); bridge.type='file'; bridge.id='pmFileBridge'; bridge.multiple=true;
+        bridge.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;'; pdoc.body.appendChild(bridge); }
+      var pending=null;
+      bridge.addEventListener('change', function(){
+        var tid=pending; pending=null; var inp=tid && document.getElementById(tid); var files=bridge.files;
+        if(!inp || !files || !files.length){ bridge.value=''; return; }
+        var ok=false;
+        try{ var dt=new DataTransfer(); for(var i=0;i<files.length;i++) dt.items.add(files[i]); inp.files=dt.files; ok=inp.files&&inp.files.length>0; }catch(e){}
+        if(!ok){ try{ var dt2=new P.DataTransfer(); for(var j=0;j<files.length;j++) dt2.items.add(files[j]); inp.files=dt2.files; ok=inp.files&&inp.files.length>0; }catch(e2){} }
+        inp.dispatchEvent(new Event('change',{bubbles:true}));
+        bridge.value='';
+      });
+      var ROUTES={ videoImportBtn:['videoFileInput','video/*,audio/*'], importBigBtn:['fileInput','image/*'],
+        galleryImportBtn:['fileInput','image/*'], galleryLoadBtn:['fileInput','image/*'],
+        galleryAudioBtn:['galleryAudioInput','audio/*'], importLutBtn:['lutFileInput',''], addImageLayerBtn:['layerImageInput','image/*'] };
+      document.addEventListener('click', function(e){
+        var t=e.target && e.target.closest && e.target.closest('#videoImportBtn,#importBigBtn,#galleryImportBtn,#galleryLoadBtn,#galleryAudioBtn,#importLutBtn,#addImageLayerBtn');
+        if(!t) return; var cfg=ROUTES[t.id]; if(!cfg) return;
+        e.preventDefault(); e.stopPropagation();
+        pending=cfg[0];
+        if(cfg[1]) bridge.setAttribute('accept',cfg[1]); else bridge.removeAttribute('accept');
+        bridge.multiple = (t.id!=='galleryAudioBtn');
+        try{ bridge.click(); }catch(err){ pending=null; }
+      }, true);
+    })();
     if(!document.getElementById('literumAdjustBtn')){
       var b=document.createElement('button'); b.id='literumAdjustBtn'; b.type='button'; b.textContent='⚙ Adjust';
       document.body.appendChild(b);
@@ -22222,6 +22268,43 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       var ml=document.querySelector('.media-library');
       if(ml && !ml.querySelector('.vr-lib-close')){ var cl=document.createElement('button'); cl.className='vr-lib-close'; cl.textContent='Done';
         cl.addEventListener('click',function(){ document.body.classList.remove('lib-open'); }); ml.insertBefore(cl, ml.firstChild); }
+      // aspect switcher — mobile content is vertical-first (9:16), with 1:1 and 16:9 one tap away
+      var asp=document.createElement('div'); asp.id='vRushAspect';
+      [['9:16','9:16'],['1:1','1:1'],['16:9','16:9']].forEach(function(a){ var c=document.createElement('button');
+        c.type='button'; c.className='vr-asp'; c.setAttribute('data-ar',a[0]); c.textContent=a[1]; asp.appendChild(c); });
+      vt.appendChild(asp);
+      function setAspect(ar){ var sel=document.getElementById('aspectSelect'); if(!sel) return;
+        sel.value=ar; sel.dispatchEvent(new Event('change',{bubbles:true}));
+        Array.prototype.forEach.call(asp.children,function(c){ c.classList.toggle('on', c.getAttribute('data-ar')===ar); }); }
+      asp.addEventListener('click',function(e){ var b=e.target.closest('.vr-asp'); if(b) setAspect(b.getAttribute('data-ar')); });
+      // default to vertical for mobile content (only the first time, so we don't fight a user's later choice)
+      var sel0=document.getElementById('aspectSelect');
+      Array.prototype.forEach.call(asp.children,function(c){ c.classList.toggle('on', c.getAttribute('data-ar')===(sel0?sel0.value:'9:16')); });
+      if(!document.body.hasAttribute('data-vrush-aspect-init')){ document.body.setAttribute('data-vrush-aspect-init','1');
+        requestAnimationFrame(function(){ setAspect('9:16'); }); setTimeout(function(){ setAspect('9:16'); },160); }
+      // one clean preview: drop the native video controls; tap the preview to play/pause
+      var tp2=document.getElementById('timelinePreview');
+      if(tp2){ tp2.removeAttribute('controls'); tp2.setAttribute('playsinline',''); tp2.setAttribute('webkit-playsinline',''); }
+      var lp2=document.getElementById('libraryPreview'); if(lp2){ lp2.removeAttribute('controls'); }
+      var pbox=document.getElementById('timelinePreviewBox');
+      if(pbox && !pbox.__pmTap){ pbox.__pmTap=1; pbox.addEventListener('click', function(e){
+        if(e.target && e.target.closest && e.target.closest('#vRushAspect')) return;
+        window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
+        window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space',bubbles:true})); }); }
+      // pinch-to-zoom the timeline (expand the area you want to edit), driving the editor's own zoom
+      var ts=document.querySelector('.timeline-scroll');
+      if(ts && !ts.__pmPinch){ ts.__pmPinch=1;
+        var pd=0, pa=false;
+        function dist(t){ return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY)||1; }
+        function midx(t){ return (t[0].clientX+t[1].clientX)/2; }
+        ts.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pa=true; pd=dist(e.touches); } }, {passive:false});
+        ts.addEventListener('touchmove', function(e){ if(!pa || e.touches.length!==2) return; e.preventDefault();
+          var d=dist(e.touches), mx=midx(e.touches), r=d/pd;
+          if(r>1.1){ ts.dispatchEvent(new WheelEvent('wheel',{deltaY:-100,ctrlKey:true,clientX:mx,bubbles:true,cancelable:true})); pd=d; }
+          else if(r<1/1.1){ ts.dispatchEvent(new WheelEvent('wheel',{deltaY:100,ctrlKey:true,clientX:mx,bubbles:true,cancelable:true})); pd=d; } }, {passive:false});
+        ts.addEventListener('touchend', function(e){ if(e.touches.length<2) pa=false; }, {passive:false});
+        ts.addEventListener('touchcancel', function(){ pa=false; }, {passive:false});
+      }
     }
     function setVrt(){
       var vt=document.getElementById('videoTab'); if(!vt) return;
