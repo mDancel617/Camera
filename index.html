@@ -30,6 +30,11 @@
     letter-spacing:.08em;padding:9px 12px;border-radius:20px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 3px 10px rgba(0,0,0,.5);}
   #undoBtn.on{display:block;}
   #undoBtn:active{transform:scale(.96);}
+  @media (max-width:820px){
+    /* slim top strip (Rush-style): UNDO + MENU side by side at the very top-right */
+    #undoBtn{top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 92px);padding:8px 11px;}
+    #backMenu{top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);padding:8px 11px;}
+  }
 </style></head>
 <body>
 <div id="launcher">
@@ -5090,10 +5095,24 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link id="literum-webfonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Oswald:wght@400;700&family=Raleway:wght@400;700&family=Work+Sans:wght@400;700&family=Anton&family=Bebas+Neue&family=Archivo+Black&family=Fjalla+One&family=Playfair+Display:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Abril+Fatface&family=DM+Serif+Display&family=Cinzel:wght@400;700&family=Roboto+Slab:wght@400;700&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Caveat:wght@400;700&family=Permanent+Marker&family=Satisfy&family=Sacramento&family=Shadows+Into+Light&family=Bangers&family=Fredoka&family=Righteous&family=Bungee&family=Monoton&family=Press+Start+2P&family=Creepster&family=Roboto+Mono:wght@400;700&family=Source+Code+Pro:wght@400;700&display=swap">
 <style id="literum-mobile">
 @media (max-width:820px){
-  .brand-bar{ padding:8px 14px !important; }
-  .brand .mark{ width:26px; height:26px; font-size:18px; }
-  .brand .name{ font-size:19px; }
-  .top-tabs{ padding:0 6px !important; }
+  /* Rush-style minimal top: hide the logo bar + tabs so the editor fills the screen; a hamburger holds them */
+  .brand-bar, .top-tabs{ display:none !important; }
+  #pmBurger{ position:fixed; top:calc(env(safe-area-inset-top) + 8px); left:calc(env(safe-area-inset-left) + 10px); z-index:9998;
+    width:40px; height:40px; border-radius:12px; border:1px solid rgba(255,255,255,.22); background:rgba(10,10,22,.74);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; }
+  #pmBurger span{ width:18px; height:2px; background:#eaeaf2; border-radius:1px; transition:.15s; }
+  body.pm-menu-open #pmBurger span:nth-child(1){ transform:translateY(6px) rotate(45deg); }
+  body.pm-menu-open #pmBurger span:nth-child(2){ opacity:0; }
+  body.pm-menu-open #pmBurger span:nth-child(3){ transform:translateY(-6px) rotate(-45deg); }
+  #pmBurgerMenu{ position:fixed; top:calc(env(safe-area-inset-top) + 54px); left:calc(env(safe-area-inset-left) + 10px); z-index:9999;
+    min-width:190px; background:rgba(16,16,26,.98); border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:8px; display:none;
+    box-shadow:0 14px 34px rgba(0,0,0,.6); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  body.pm-menu-open #pmBurgerMenu{ display:block; }
+  .pm-bm-brand{ font-weight:800; color:#ffd76a; font-size:15px; padding:6px 10px 8px; letter-spacing:.03em; border-bottom:1px solid rgba(255,255,255,.1); margin-bottom:6px; }
+  .pm-bm-item{ display:block; width:100%; text-align:left; appearance:none; border:none; background:transparent; color:#eaeaf2;
+    font-family:inherit; font-size:15px; font-weight:600; padding:12px 12px; border-radius:10px; cursor:pointer; }
+  .pm-bm-item.on{ background:linear-gradient(180deg,#ffd76a,#e0a63a); color:#1a1408; }
+  .pm-bm-item:active{ background:rgba(255,255,255,.08); }
   #photoTab.active{ flex-direction:column !important; }
   .stage{ padding:8px !important; width:100% !important; flex:1 1 auto !important; min-height:0 !important; touch-action:none !important; }
   .stage .canvas-wrap, .stage canvas{ touch-action:none !important; }
@@ -5166,7 +5185,8 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .clip-inspector-row input[type=range]{ flex:1 1 100% !important; width:100% !important; }
   .timeline-scroll{ max-height:46vh !important; }
   /* ---------- Gallery tab: mobile-friendly ---------- */
-  #galleryTab.active{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; padding-bottom:94px; }
+  #galleryTab.active{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; padding-bottom:94px; padding-top:calc(env(safe-area-inset-top) + 50px) !important; }
+  body[data-ed-tab="photo"] .stage{ padding-top:calc(env(safe-area-inset-top) + 48px) !important; }
   .gallery-workspace{ display:block !important; grid-template-columns:1fr !important; grid-template-rows:auto !important; height:auto !important; min-height:0 !important; }
   .gallery-main, .gallery-side{ display:block !important; grid-column:auto !important; grid-row:auto !important; width:100% !important;
     border-right:none !important; min-height:0 !important; height:auto !important; }
@@ -5269,9 +5289,15 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
     border-top:1px solid var(--panel-line); border-radius:16px 16px 0 0; box-shadow:0 -14px 34px rgba(0,0,0,.6);
     transform:translateY(102%); transition:transform .28s cubic-bezier(.2,.8,.2,1); display:flex !important; flex-direction:column; overflow:hidden; }
   body.v-rush.lib-open .media-library{ transform:translateY(0); }
-  body.v-rush .media-library::before{ content:''; position:absolute; top:8px; left:50%; transform:translateX(-50%);
-    width:44px; height:5px; border-radius:3px; background:var(--accent-dim); z-index:3; }
-  body.v-rush .media-library-header{ margin-top:20px !important; padding:0 14px !important; }
+  body.v-rush .media-library::before{ display:none !important; }   /* replaced by the interactive grab handle */
+  body.v-rush .media-library-header{ margin-top:2px !important; padding:0 14px !important; }
+  /* big, obvious "collapse" handle at the top of every bottom sheet: tap it or swipe down to close */
+  .vr-sheet-grab{ position:relative; flex:0 0 auto; width:100%; height:34px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; touch-action:none; z-index:5; }
+  .vr-sheet-grab::after{ content:'tap or swipe down to close'; position:absolute; bottom:1px; left:0; right:0; text-align:center;
+    font-size:9.5px; letter-spacing:.04em; color:var(--text-dim); opacity:.7; pointer-events:none; }
+  .vr-grab-bar{ width:60px; height:6px; border-radius:3px; background:var(--accent-dim); transition:background .12s, width .12s; }
+  .vr-sheet-grab:active .vr-grab-bar{ background:var(--accent); width:72px; }
   body.v-rush .media-list{ max-height:none !important; flex:1 1 auto !important; padding:6px 14px 14px !important; }
   .vr-lib-close{ align-self:flex-end; margin:18px 12px 0; appearance:none; border:1px solid var(--panel-line);
     background:rgba(0,0,0,.4); color:var(--text); border-radius:16px; padding:7px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
@@ -5301,7 +5327,7 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
     -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); box-shadow:0 3px 9px rgba(0,0,0,.45); }
   .pm-chip.on{ background:linear-gradient(180deg,#ffd76a,#e0a63a); color:#1a1408; border-color:rgba(0,0,0,.2); }
 }
-@media (min-width:821px){ #literumAdjustBtn, #pmDial{ display:none !important; } }
+@media (min-width:821px){ #literumAdjustBtn, #pmDial, #pmBurger, #pmBurgerMenu{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -13504,7 +13530,12 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   const loadProgressText = document.getElementById('loadProgressText');
 
   async function handleFiles(fileList){
-    const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/') || isRawFile(f));
+    const files = Array.from(fileList || []).filter(f => {
+      if(f.type.startsWith('image/') || isRawFile(f)) return true;
+      var ext = (f.name.split('.').pop()||'').toLowerCase();
+      if(['jpg','jpeg','png','heic','heif','webp','gif','bmp','tif','tiff','avif'].includes(ext)) return true;
+      return !f.type && !['mp4','mov','m4v','webm','avi','mkv','mp3','m4a','wav','aac','ogg','oga','opus','flac','3gp'].includes(ext);  // iOS can hand typeless images
+    });
     if(files.length === 0) return;
 
     const startIndex = photos.length;
@@ -21504,7 +21535,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     gal('galleryTotals').textContent = all.length ? `${all.length} image${all.length > 1 ? 's' : ''}` + (inc.length !== all.length ? ` · ${inc.length} included` : '') : '';
     const n = gal('gallerySlideCount');
     n.max = String(Math.max(1, inc.length));
-    if(parseInt(n.value, 10) > inc.length) n.value = String(Math.max(1, inc.length));
+    n.value = String(Math.max(1, inc.length));   // use all imported images by default
     gal('gallerySlideMax').textContent = inc.length ? `of ${inc.length}` : '';
     gal('galleryGenerateBtn').disabled = inc.length === 0 || gallery.exporting;
   }
@@ -22276,6 +22307,27 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       var ml=document.querySelector('.media-library');
       if(ml && !ml.querySelector('.vr-lib-close')){ var cl=document.createElement('button'); cl.className='vr-lib-close'; cl.textContent='Done';
         cl.addEventListener('click',function(){ document.body.classList.remove('lib-open'); }); ml.insertBefore(cl, ml.firstChild); }
+      // ---- easy collapse: a tappable/swipe-down grab handle on every bottom sheet, + tap-outside ----
+      function pmAddGrab(sheet, onClose){
+        if(!sheet || sheet.querySelector('.vr-sheet-grab')) return;
+        var g=document.createElement('div'); g.className='vr-sheet-grab'; var bar=document.createElement('span'); bar.className='vr-grab-bar'; g.appendChild(bar);
+        sheet.insertBefore(g, sheet.firstChild);
+        g.addEventListener('click', function(ev){ ev.stopPropagation(); onClose(); });
+        var sy=0, sv=false, moved=0;
+        g.addEventListener('touchstart', function(e){ if(e.touches.length!==1){ sv=false; return; } sy=e.touches[0].clientY; sv=true; moved=0; }, {passive:true});
+        g.addEventListener('touchmove', function(e){ if(!sv) return; moved=e.touches[0].clientY - sy; if(moved>0) sheet.style.transform='translateY('+Math.min(moved,520)+'px)'; }, {passive:true});
+        g.addEventListener('touchend', function(){ if(!sv) return; sv=false; sheet.style.transform=''; if(moved>60) onClose(); }, {passive:true});
+      }
+      pmAddGrab(ml, function(){ document.body.classList.remove('lib-open'); });
+      pmAddGrab(document.getElementById('clipProperties'), function(){ var d=document.getElementById('clipPropertiesCloseBtn'); if(d) d.click(); });
+      // tap anywhere outside the Library sheet (and not on the tool bar) collapses it back to the timeline
+      if(!document.body.__pmOutside){ document.body.__pmOutside=1;
+        document.addEventListener('click', function(e){
+          if(!document.body.classList.contains('lib-open')) return;
+          var inside = e.target && e.target.closest && (e.target.closest('.media-library') || e.target.closest('#vRushTools'));
+          if(!inside){ e.stopPropagation(); document.body.classList.remove('lib-open'); }
+        }, true);
+      }
       // aspect switcher — mobile content is vertical-first (9:16), with 1:1 and 16:9 one tap away
       var asp=document.createElement('div'); asp.id='vRushAspect';
       [['9:16','9:16'],['1:1','1:1'],['16:9','16:9']].forEach(function(a){ var c=document.createElement('button');
@@ -22290,26 +22342,68 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       Array.prototype.forEach.call(asp.children,function(c){ c.classList.toggle('on', c.getAttribute('data-ar')===(sel0?sel0.value:'9:16')); });
       if(!document.body.hasAttribute('data-vrush-aspect-init')){ document.body.setAttribute('data-vrush-aspect-init','1');
         requestAnimationFrame(function(){ setAspect('9:16'); }); setTimeout(function(){ setAspect('9:16'); },160); }
-      // one clean preview: drop the native video controls; tap the preview to play/pause
+      // one clean preview: drop the native video controls
       var tp2=document.getElementById('timelinePreview');
       if(tp2){ tp2.removeAttribute('controls'); tp2.setAttribute('playsinline',''); tp2.setAttribute('webkit-playsinline',''); }
       var lp2=document.getElementById('libraryPreview'); if(lp2){ lp2.removeAttribute('controls'); }
-      var pbox=document.getElementById('timelinePreviewBox');
-      if(pbox && !pbox.__pmTap){ pbox.__pmTap=1; pbox.addEventListener('click', function(e){
-        if(e.target && e.target.closest && e.target.closest('#vRushAspect')) return;
-        window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
-        window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space',bubbles:true})); }); }
-      // pinch-to-zoom the timeline (expand the area you want to edit), driving the editor's own zoom
+      // preview: pinch to zoom in/out, drag to pan when zoomed, double-tap to reset, single tap = play/pause
+      var pbox=document.getElementById('timelinePreviewBox'), pframe=document.getElementById('sequenceFrame');
+      if(pbox && pframe && !pbox.__pmZoom){ pbox.__pmZoom=1;
+        var zs=1, ztx=0, zty=0, zmode=null, zd0=0, zs0=1, ztx0=0, zty0=0, px0=0, py0=0, zmoved=0, zlastTap=0, ztapTimer=null;
+        function zapply(){ pframe.style.transformOrigin='center center';
+          pframe.style.transform=(zs===1&&ztx===0&&zty===0)?'':('translate('+ztx+'px,'+zty+'px) scale('+zs+')'); }
+        function zclamp(){ var mx=(zs-1)*pbox.clientWidth/2+30, my=(zs-1)*pbox.clientHeight/2+30;
+          ztx=Math.max(-mx,Math.min(mx,ztx)); zty=Math.max(-my,Math.min(my,zty)); }
+        function zdist(t){ return Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)||1; }
+        function playPause(){ window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
+          window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space',bubbles:true})); }
+        pbox.addEventListener('touchstart', function(e){
+          if(e.target && e.target.closest && e.target.closest('#vRushAspect')){ zmode='skip'; return; }
+          if(e.touches.length===2){ zmode='pinch'; zd0=zdist(e.touches); zs0=zs; ztx0=ztx; zty0=zty; }
+          else if(e.touches.length===1){ zmoved=0; px0=e.touches[0].clientX; py0=e.touches[0].clientY;
+            zmode = zs>1.02 ? 'pan' : 'tap'; ztx0=ztx; zty0=zty; }
+        }, {passive:false});
+        pbox.addEventListener('touchmove', function(e){
+          if(zmode==='skip') return;
+          if(zmode==='pinch' && e.touches.length===2){ if(e.cancelable) e.preventDefault();
+            zs=Math.max(1,Math.min(5, zs0*zdist(e.touches)/zd0)); zclamp(); zapply(); }
+          else if(zmode==='pan' && e.touches.length===1){ if(e.cancelable) e.preventDefault();
+            ztx=ztx0+(e.touches[0].clientX-px0); zty=zty0+(e.touches[0].clientY-py0); zclamp(); zapply(); }
+          else if(zmode==='tap' && e.touches.length===1){ zmoved=Math.hypot(e.touches[0].clientX-px0, e.touches[0].clientY-py0); }
+        }, {passive:false});
+        pbox.addEventListener('touchend', function(e){
+          var m=zmode; zmode=null;
+          if(m==='skip') return;
+          if(m==='pinch'){ if(zs<1.04){ zs=1; ztx=0; zty=0; zapply(); } return; }
+          if(m==='pan'){ return; }
+          if(m==='tap' && zmoved<10){
+            var now=Date.now();
+            if(now-zlastTap<300){ if(ztapTimer){ clearTimeout(ztapTimer); ztapTimer=null; } zlastTap=0; zs=1; ztx=0; zty=0; zapply(); }  // double-tap resets
+            else { zlastTap=now; ztapTimer=setTimeout(function(){ ztapTimer=null; playPause(); }, 270); }                               // single tap plays
+          }
+        }, {passive:false});
+      }
+      // pinch-to-zoom the timeline, anchored at the spot between your fingers. We drive the editor's
+      // own zoom (Ctrl +/- = a fixed 1.25x step around the playhead), then re-anchor the scroll with
+      // pure geometry so the point under your fingers stays put — reliable on iOS (no synthetic
+      // wheel anchor-x needed). TL_LABEL_W (the track-label column) is 64px and doesn't scale.
       var ts=document.querySelector('.timeline-scroll');
       if(ts && !ts.__pmPinch){ ts.__pmPinch=1;
-        var pd=0, pa=false;
+        var LABEL=64, pd=0, pa=false;
         function dist(t){ return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY)||1; }
-        function midx(t){ return (t[0].clientX+t[1].clientX)/2; }
+        function zoomKey(zin){ window.dispatchEvent(new KeyboardEvent('keydown',{key: zin?'=':'-', code: zin?'Equal':'Minus', ctrlKey:true, metaKey:true, bubbles:true})); }
         ts.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pa=true; pd=dist(e.touches); } }, {passive:false});
         ts.addEventListener('touchmove', function(e){ if(!pa || e.touches.length!==2) return; e.preventDefault();
-          var d=dist(e.touches), mx=midx(e.touches), r=d/pd;
-          if(r>1.1){ ts.dispatchEvent(new WheelEvent('wheel',{deltaY:-100,ctrlKey:true,clientX:mx,bubbles:true,cancelable:true})); pd=d; }
-          else if(r<1/1.1){ ts.dispatchEvent(new WheelEvent('wheel',{deltaY:100,ctrlKey:true,clientX:mx,bubbles:true,cancelable:true})); pd=d; } }, {passive:false});
+          var d=dist(e.touches), r=d/pd;
+          var factor = r>1.12 ? 1.25 : (r<1/1.12 ? 0.8 : 0);
+          if(!factor) return;
+          var tsRect=ts.getBoundingClientRect();
+          var fingerX=((e.touches[0].clientX+e.touches[1].clientX)/2) - tsRect.left;   // x inside the viewport
+          var anchorPx=ts.scrollLeft + fingerX;                                         // content px under the fingers
+          zoomKey(factor>1);                                                            // editor zooms + re-scrolls (around playhead)
+          ts.scrollLeft = Math.max(0, LABEL + (anchorPx - LABEL)*factor - fingerX);     // re-anchor under the fingers
+          pd=d;
+        }, {passive:false});
         ts.addEventListener('touchend', function(e){ if(e.touches.length<2) pa=false; }, {passive:false});
         ts.addEventListener('touchcancel', function(){ pa=false; }, {passive:false});
       }
@@ -22322,12 +22416,32 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           off=Math.max(8, Math.min(92, Math.round(gap))); } }catch(e){}
       document.documentElement.style.setProperty('--vrt', off+'px');
     }
+    function pmSyncMenu(){ var cur=document.body.getAttribute('data-ed-tab')||'photo';
+      Array.prototype.forEach.call(document.querySelectorAll('#pmBurgerMenu .pm-bm-item'),function(it){ it.classList.toggle('on', it.getAttribute('data-tab')===cur); }); }
     function updTab(){ var a=document.querySelector('.tab-btn.active'); var n=a?a.getAttribute('data-tab'):'photo';
       document.body.setAttribute('data-ed-tab', n||'photo'); if(n!=='photo') document.body.classList.remove('drawer-open');
       var mob = window.innerWidth<=820;
       if(n==='video' && mob){ buildVideoRush(); document.body.classList.add('v-rush'); requestAnimationFrame(setVrt); setTimeout(setVrt,120); }
-      else { document.body.classList.remove('v-rush','lib-open'); } }
+      else { document.body.classList.remove('v-rush','lib-open'); }
+      pmSyncMenu(); }
     window.addEventListener('resize', function(){ if(document.body.classList.contains('v-rush')) setVrt(); });
+    // Rush-style minimal top: a hamburger holds the brand + Photo/Video/Gallery (the bar and tabs are hidden)
+    (function(){
+      if(document.getElementById('pmBurger')) return;
+      var burger=document.createElement('button'); burger.id='pmBurger'; burger.type='button'; burger.setAttribute('aria-label','Menu');
+      burger.innerHTML='<span></span><span></span><span></span>'; document.body.appendChild(burger);
+      var menu=document.createElement('div'); menu.id='pmBurgerMenu';
+      var brand=document.createElement('div'); brand.className='pm-bm-brand'; brand.textContent='Literum'; menu.appendChild(brand);
+      [['photo','Photo'],['video','Video'],['gallery','Gallery']].forEach(function(t){ var it=document.createElement('button');
+        it.className='pm-bm-item'; it.type='button'; it.setAttribute('data-tab',t[0]); it.textContent=t[1]; menu.appendChild(it); });
+      document.body.appendChild(menu);
+      burger.addEventListener('click', function(e){ e.stopPropagation(); document.body.classList.toggle('pm-menu-open'); pmSyncMenu(); });
+      menu.addEventListener('click', function(e){ var it=e.target.closest('.pm-bm-item'); if(!it) return;
+        var tb=document.querySelector('.tab-btn[data-tab="'+it.getAttribute('data-tab')+'"]'); if(tb) tb.click();
+        document.body.classList.remove('pm-menu-open'); });
+      document.addEventListener('click', function(e){ if(!document.body.classList.contains('pm-menu-open')) return;
+        if(e.target.closest && (e.target.closest('#pmBurgerMenu')||e.target.closest('#pmBurger'))) return; document.body.classList.remove('pm-menu-open'); }, true);
+    })();
     Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(t){ t.addEventListener('click',function(){ setTimeout(updTab,0); }); });
     updTab();
     // ===== gesture editing =====
