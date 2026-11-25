@@ -5119,17 +5119,52 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
     background:linear-gradient(180deg,#e2b765,#b98a3a); box-shadow:0 5px 16px rgba(0,0,0,.55); }
   body[data-ed-tab="photo"] #literumAdjustBtn{ display:flex; }
   body.drawer-open #literumAdjustBtn{ bottom:calc(54vh + 12px); background:linear-gradient(180deg,#3a3d42,#26282c); color:#f0ead8; }
-  #videoTab.active, #galleryTab.active{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; }
+  #videoTab.active, #galleryTab.active{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; padding-bottom:40px; }
   .video-workspace, .gallery-workspace{ display:block !important; height:auto !important; min-height:0 !important; }
   .video-top-row, .preview-row{ display:block !important; }
-  .video-top-row > *, .preview-row > *, .media-library, .preview-box{ width:100% !important; max-width:100% !important; }
-  .preview-box{ margin:0 0 10px !important; }
-  .preview-box, #libraryPreviewBox, #timelinePreviewBox{ min-height:180px !important; position:relative !important; }
-  .preview-box video, #galleryPreview, #timelinePreview, #libraryPreview{ width:100% !important; height:auto !important; max-height:46vh; }
-  .media-library{ max-height:none !important; }
-  .media-list{ max-height:34vh !important; }
-  .timeline-area{ min-height:0 !important; height:auto !important; }
-  .timeline-scroll{ max-height:48vh !important; }
+  .video-top-row > *, .media-library{ width:100% !important; max-width:100% !important; }
+  /* --- previews: full-width 16:9 cards, cleanly stacked --- */
+  .preview-row{ background:transparent !important; padding:10px 10px 0 !important; }
+  .preview-box{ width:100% !important; flex:none !important; flex-direction:column !important;
+    aspect-ratio:16/9; min-height:0 !important; margin:0 0 10px !important; border-radius:10px !important;
+    border:1px solid var(--panel-line); position:relative !important; }
+  .preview-box video{ max-height:100% !important; max-width:100% !important; }
+  #timelinePreviewBox .sequence-frame{ width:100% !important; height:100% !important; max-width:100% !important; max-height:100% !important; }
+  .preview-label{ max-width:60% !important; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px !important; }
+  .preview-guide-btn{ top:auto !important; bottom:8px !important; right:8px !important; padding:7px 12px !important; font-size:12px !important; }
+  .preview-placeholder{ font-size:14px !important; }
+  /* --- media library --- */
+  .media-library{ padding:0 10px !important; max-height:none !important; }
+  .media-list{ max-height:40vh !important; }
+  .timelines-section-header .reset-btn, .media-library-header-actions .reset-btn{ padding:8px 12px !important; font-size:13px !important; }
+  /* --- timeline area --- */
+  .timeline-area{ min-height:0 !important; height:auto !important; max-height:none !important; }
+  .timeline-resize-handle{ display:none !important; }
+  /* toolbar -> stacked, finger-friendly */
+  .timeline-toolbar{ flex-direction:column !important; align-items:stretch !important; gap:10px !important; padding:10px !important; }
+  .timeline-tools{ display:grid !important; grid-template-columns:1fr 1fr 1fr; gap:6px !important; }
+  .timeline-tools .tool-btn{ padding:12px 6px !important; font-size:14px !important; text-align:center; }
+  .timeline-toolbar-actions{ display:flex !important; flex-wrap:wrap !important; gap:8px !important; }
+  .timeline-toolbar-actions .dot-sep{ display:none !important; }
+  .timeline-toolbar-actions .reset-btn{ flex:1 1 calc(50% - 8px); padding:12px 8px !important; font-size:13px !important; text-align:center; }
+  .timeline-toolbar-actions .timecode-readout{ flex:1 1 100%; width:100% !important; font-size:17px !important; padding:10px 8px !important; }
+  .timeline-toolbar-actions .export-accent{ flex:1 1 100% !important; }
+  /* settings row: wrap + hide desktop-only bits */
+  .timeline-settings-row{ flex-wrap:wrap !important; gap:8px 12px !important; padding:10px !important; }
+  .timeline-settings-row select{ padding:8px 6px !important; font-size:14px !important; }
+  .timeline-settings-row .dot-sep{ display:none !important; }
+  .timeline-settings-row .hint-text{ display:none !important; }
+  .timeline-settings-row label:has(#videoTrackHeightInput), .timeline-settings-row label:has(#audioTrackHeightInput){ display:none !important; }
+  .timeline-settings-row .reset-btn{ padding:9px 11px !important; font-size:13px !important; }
+  #toolHint{ display:none !important; }
+  /* clip properties / inspector */
+  .clip-properties{ flex-wrap:wrap !important; gap:8px !important; padding:10px !important; }
+  .clip-properties .reset-btn{ padding:10px 11px !important; font-size:13px !important; }
+  .clip-properties > label{ flex:1 1 100% !important; }
+  .clip-inspector{ width:100% !important; }
+  .clip-inspector-row{ flex-wrap:wrap !important; gap:4px 8px !important; }
+  .clip-inspector-row input[type=range]{ flex:1 1 100% !important; width:100% !important; }
+  .timeline-scroll{ max-height:46vh !important; }
   .gallery-workspace{ grid-template-columns:1fr !important; grid-template-rows:auto !important; }
   .gallery-main, .gallery-side{ grid-column:auto !important; grid-row:auto !important; width:100% !important;
     border-right:none !important; min-height:0 !important; height:auto !important; }
