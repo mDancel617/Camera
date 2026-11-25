@@ -5095,7 +5095,8 @@ els.homeShoot && els.homeShoot.addEventListener('click', async ()=>{
   .brand .name{ font-size:19px; }
   .top-tabs{ padding:0 6px !important; }
   #photoTab.active{ flex-direction:column !important; }
-  .stage{ padding:8px !important; width:100% !important; flex:1 1 auto !important; min-height:0 !important; }
+  .stage{ padding:8px !important; width:100% !important; flex:1 1 auto !important; min-height:0 !important; touch-action:none !important; }
+  .stage .canvas-wrap, .stage canvas{ touch-action:none !important; }
   .panel-resize-handle, .filmstrip-resize-handle{ display:none !important; }
   .panel{
     position:fixed !important; left:0; right:0; bottom:0; top:auto !important;
@@ -22011,53 +22012,65 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     updTab();
     // gesture editing on the photo:
     //   drag up/down      -> brightness (exposure slider)
-    //   diagonal from a corner toward the opposite corner -> contrast (increase out, decrease back)
+    //   diagonal TL<->BR  -> contrast (toward bottom-right raises, back lowers)
     //   quick horizontal flick -> previous / next photo
-    var cw=document.querySelector('.canvas-wrap');
-    if(cw){
+    var gestureTarget=document.querySelector('.stage')||document.querySelector('.canvas-wrap');
+    if(gestureTarget){
       var expoEl=document.getElementById('exposure');
       var contEl=document.getElementById('contrast');
       function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
       function setSlider(el,val){ if(!el) return; el.value=String(val); el.dispatchEvent(new Event('input',{bubbles:true})); }
       function commitSlider(el){ if(!el) return; el.dispatchEvent(new Event('change',{bubbles:true})); }
+      // little on-screen readout so the gesture is visibly confirmed
+      var hud=document.createElement('div'); hud.id='pmGestureHud';
+      hud.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:4000;'
+        +'padding:10px 18px;border-radius:24px;background:rgba(8,9,14,.82);color:#ffe14d;'
+        +'font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:17px;letter-spacing:.03em;'
+        +'box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;opacity:0;transition:opacity .15s;'
+        +'-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);white-space:nowrap;';
+      document.body.appendChild(hud);
+      var hudT=null;
+      function showHud(txt){ hud.textContent=txt; hud.style.opacity='1'; if(hudT) clearTimeout(hudT); }
+      function hideHud(){ if(hudT) clearTimeout(hudT); hudT=setTimeout(function(){ hud.style.opacity='0'; },700); }
       var g=null;
-      cw.addEventListener('touchstart',function(e){
+      gestureTarget.addEventListener('touchstart',function(e){
         if(e.touches.length!==1){ g=null; return; }
-        var t=e.touches[0], r=cw.getBoundingClientRect();
+        var t=e.touches[0], r=gestureTarget.getBoundingClientRect();
         g={ x0:t.clientX, y0:t.clientY, t0:Date.now(), rect:r,
-            nx:(t.clientX-r.left)/r.width, ny:(t.clientY-r.top)/r.height,
             baseE: expoEl?parseFloat(expoEl.value):0, baseC: contEl?parseFloat(contEl.value):1,
-            mode:null, cx:0, cy:0 };
+            mode:null };
       },{passive:true});
-      cw.addEventListener('touchmove',function(e){
+      gestureTarget.addEventListener('touchmove',function(e){
         if(!g || e.touches.length!==1){ return; }
         var t=e.touches[0], dx=t.clientX-g.x0, dy=t.clientY-g.y0;
         if(g.mode===null){
-          if(Math.abs(dx)<14 && Math.abs(dy)<14){ return; }
-          var cornerX = g.nx<0.34?-1:(g.nx>0.66?1:0);
-          var cornerY = g.ny<0.34?-1:(g.ny>0.66?1:0);
+          if(Math.abs(dx)<12 && Math.abs(dy)<12){ return; }
           var ratio = Math.abs(dx)/(Math.abs(dy)||1);
-          var diagLike = Math.abs(dx)>16 && Math.abs(dy)>16 && ratio>0.45 && ratio<2.2;
-          if(cornerX!==0 && cornerY!==0 && diagLike){ g.mode='contrast'; g.cx=cornerX; g.cy=cornerY; }
-          else if(Math.abs(dy) > Math.abs(dx)*1.25){ g.mode='brightness'; }
+          var diagLike = Math.abs(dx)>14 && Math.abs(dy)>14 && ratio>0.5 && ratio<2.0;
+          if(diagLike){ g.mode='contrast'; }
+          else if(Math.abs(dy) > Math.abs(dx)*1.2){ g.mode='brightness'; }
           else { g.mode='swipe'; }
         }
-        if(g.mode==='brightness'){
-          var dE=(-dy / g.rect.height)*1.8;
-          setSlider(expoEl, clamp(g.baseE+dE,-1,1).toFixed(3));
-        } else if(g.mode==='contrast'){
-          // diagonal along the top-left <-> bottom-right axis: toward bottom-right raises
-          // contrast, back toward top-left lowers it (start from either corner)
-          var proj=(dx + dy)/Math.hypot(g.rect.width,g.rect.height);
-          setSlider(contEl, clamp(g.baseC + proj*2.4, 0, 2).toFixed(3));
+        if(g.mode==='brightness' || g.mode==='contrast'){
+          if(e.cancelable) e.preventDefault();   // stop the page from panning under the gesture
+          if(g.mode==='brightness'){
+            var nv=clamp(g.baseE + (-dy / g.rect.height)*1.8, -1, 1);
+            setSlider(expoEl, nv.toFixed(3));
+            showHud((nv>=0?'☀ +':'☀ ')+nv.toFixed(2));          // sun
+          } else {
+            var proj=(dx + dy)/Math.hypot(g.rect.width,g.rect.height);
+            var cv=clamp(g.baseC + proj*2.4, 0, 2);
+            setSlider(contEl, cv.toFixed(3));
+            showHud('◑ '+cv.toFixed(2)+'×');                     // half-moon = contrast
+          }
         }
-      },{passive:true});
-      cw.addEventListener('touchend',function(e){
+      },{passive:false});
+      gestureTarget.addEventListener('touchend',function(e){
         if(!g){ return; }
         var m=g.mode, dur=Date.now()-g.t0, t=e.changedTouches[0];
         var dx=t.clientX-g.x0, dy=t.clientY-g.y0;
-        if(m==='brightness'){ commitSlider(expoEl); }
-        else if(m==='contrast'){ commitSlider(contEl); }
+        if(m==='brightness'){ commitSlider(expoEl); hideHud(); }
+        else if(m==='contrast'){ commitSlider(contEl); hideHud(); }
         else if((m==='swipe'||m===null) && dur<650 && Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){
           window.dispatchEvent(new KeyboardEvent('keydown',{key: dx<0?'ArrowRight':'ArrowLeft', bubbles:true}));
         }
